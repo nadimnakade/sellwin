@@ -4,6 +4,7 @@ import { DatePipe, NgClass } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
 import { UtilsService } from '../../core/services/utils.service';
 import { Order } from '../../core/interfaces';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-orders',
@@ -97,6 +98,9 @@ import { Order } from '../../core/interfaces';
                       <div class="flex items-center justify-end gap-2">
                         <a [routerLink]="['/orders', order.id]" class="btn-ghost p-1.5" title="View">
                           <i class="pi pi-eye"></i>
+                        </a>
+                        <a [href]="getInvoiceUrl(order.id)" target="_blank" class="btn-ghost p-1.5 text-blue-600 hover:text-blue-700" title="Download Invoice">
+                          <i class="pi pi-file-pdf"></i>
                         </a>
                         <button (click)="utils.openWhatsApp(order.mobile)" class="btn-ghost p-1.5 text-green-600 hover:text-green-700" title="WhatsApp">
                           <i class="pi pi-whatsapp"></i>
@@ -200,6 +204,10 @@ export class OrdersComponent implements OnInit {
       Date: o.dateCreated,
     }));
     this.utils.exportToCsv(data, `orders-${new Date().toISOString().slice(0, 10)}`);
+  }
+
+  getInvoiceUrl(orderId: number): string {
+    return `${environment.apiUrl}/invoice/${orderId}?consumer_key=${environment.consumerKey}&consumer_secret=${environment.consumerSecret}`;
   }
 
   private updatePageNumbers(): void {
