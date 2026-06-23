@@ -1,0 +1,137 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import 'primeng/resources/themes/lara-light-blue/theme.css';
+@import 'primeng/resources/primeng.min.css';
+@import 'primeicons/primeicons.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply transition-colors duration-200;
+  }
+
+  body {
+    @apply font-sans bg-surface-50 text-surface-900 dark:bg-surface-950 dark:text-surface-100 m-0 p-0;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-300 dark:bg-surface-600 rounded-full;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/80 dark:bg-surface-800/80 backdrop-blur-xl border border-white/20 dark:border-surface-700/30 rounded-2xl shadow-lg shadow-surface-200/50 dark:shadow-surface-900/30;
+  }
+
+  .glass-card-solid {
+    @apply bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-2xl shadow-sm;
+  }
+
+  .stat-card {
+    @apply glass-card p-6 hover:shadow-xl hover:shadow-primary-500/5 transition-all duration-300;
+  }
+
+  .page-container {
+    @apply p-6 lg:p-8 max-w-7xl mx-auto animate-fade-in;
+  }
+
+  .section-title {
+    @apply text-xl font-semibold text-surface-900 dark:text-surface-100 mb-6;
+  }
+
+  .page-header {
+    @apply flex items-center justify-between mb-8;
+  }
+
+  .page-title {
+    @apply text-2xl lg:text-3xl font-bold text-surface-900 dark:text-surface-50;
+  }
+
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 inline-flex items-center gap-2;
+  }
+
+  .btn-ghost {
+    @apply text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-700 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200;
+  }
+
+  .status-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .status-pending {
+    @apply status-badge bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400;
+  }
+
+  .status-processing {
+    @apply status-badge bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400;
+  }
+
+  .status-completed {
+    @apply status-badge bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400;
+  }
+
+  .status-cancelled {
+    @apply status-badge bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400;
+  }
+
+  .status-on-hold {
+    @apply status-badge bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-2.5 bg-white dark:bg-surface-800 border border-surface-300 dark:border-surface-600 rounded-lg text-surface-900 dark:text-surface-100 placeholder-surface-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all;
+  }
+
+  .skeleton-pulse {
+    @apply bg-surface-200 dark:bg-surface-700 rounded animate-pulse;
+  }
+}
+
+.p-datatable .p-datatable-thead > tr > th {
+  @apply bg-surface-50 dark:bg-surface-800 text-surface-600 dark:text-surface-300 font-semibold text-xs uppercase tracking-wider py-3 px-4;
+}
+
+.p-datatable .p-datatable-tbody > tr {
+  @apply border-b border-surface-100 dark:border-surface-700/50;
+}
+
+.p-datatable .p-datatable-tbody > tr:hover {
+  @apply bg-surface-50/50 dark:bg-surface-800/30;
+}
+
+.p-datatable .p-datatable-tbody > tr > td {
+  @apply py-3 px-4 text-sm;
+}
+
+.p-paginator {
+  @apply bg-transparent border-t border-surface-200 dark:border-surface-700 pt-4;
+}
+
+.p-paginator .p-paginator-pages .p-paginator-page.p-highlight {
+  @apply bg-primary-600 text-white;
+}
+
+.p-dropdown {
+  @apply w-full;
+}
+
+.p-inputtext {
+  @apply input-field;
+}
+
+.p-button {
+  @apply rounded-lg;
+}
