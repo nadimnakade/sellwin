@@ -207,7 +207,8 @@ export class OrdersComponent implements OnInit {
   }
 
   getInvoiceUrl(orderId: number): string {
-    return `${environment.apiUrl}/invoice/${orderId}?consumer_key=${environment.consumerKey}&consumer_secret=${environment.consumerSecret}`;
+    const base = environment.apiUrl.replace('/wp-json/sellwin/v1', '');
+    return `${base}/?sellwin_invoice=1&order_id=${orderId}&consumer_key=${environment.consumerKey}&consumer_secret=${environment.consumerSecret}`;
   }
 
   private updatePageNumbers(): void {
