@@ -4,8 +4,8 @@ export const environment = {
   apiUrl: 'https://deepskyblue-peafowl-120684.hostingersite.com/wp-json/sellwin/v1',
   woocommerceUrl: 'https://deepskyblue-peafowl-120684.hostingersite.com/wp-json/wc/v3',
   authUrl: 'https://deepskyblue-peafowl-120684.hostingersite.com/wp-json/jwt-auth/v1',
-  consumerKey: 'ck_0793530a167bdcdb1f7391cdd8d30753f86804d3',
-  consumerSecret: 'cs_3112734eb56781f5bef45bb09ecc82bde661257f',
+  consumerKey: 'ck_bdf1417d30cd63b6d23e8ef2291810789ad8348f',
+  consumerSecret: 'cs_781f46d3c90e43cf538fe6365171655cb192bf18',
 };
 
 export const whatsappConfig = {
