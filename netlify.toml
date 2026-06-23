@@ -1,0 +1,6 @@
+[build]
+  command = "npx ng build --configuration=production"
+  publish = "dist/sellwin-admin"
+
+[build.environment]
+  NODE_VERSION = "22"
