@@ -13,7 +13,7 @@ import { ActiveCart } from '../../core/interfaces';
       <div class="page-header">
         <div>
           <h1 class="page-title">Active Carts</h1>
-          <p class="text-surface-500 mt-1">Customers actively shopping in the last 30 minutes</p>
+          <p class="text-surface-500 mt-1">Customers actively shopping in the last 5 minutes</p>
         </div>
         <div class="flex items-center gap-3">
           <button (click)="exportCsv()" class="btn-ghost" [disabled]="!carts().length">

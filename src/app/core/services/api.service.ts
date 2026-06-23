@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, of, throwError, map, catchError } from 'rxjs';
+import { Observable, of, throwError, map, catchError, forkJoin } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   DashboardStats, Order, OrderDetail, ActiveCart, AbandonedCart,
@@ -30,16 +30,36 @@ export class ApiService {
       .set('after', today.toISOString())
       .set('per_page', '100');
 
-    return this.http.get<any[]>(`${this.wc}/orders`, { params }).pipe(
+    // Get orders today from WooCommerce
+    const orders$ = this.http.get<any[]>(`${this.wc}/orders`, { params }).pipe(
       map((orders) => {
         const revenueToday = orders.reduce((sum, o) => sum + parseFloat(o.total || '0'), 0);
-        return {
-          ordersToday: orders.length,
-          revenueToday,
-          activeCarts: 0,
-          abandonedCarts: 0,
-        };
+        return { ordersToday: orders.length, revenueToday };
       }),
+    );
+
+    // Get active/abandoned carts from plugin (5-min threshold)
+    const carts$ = this.http.get<any>(`${environment.apiUrl}/abandoned-carts`, {
+      params: this.auth().set('filter', '5min').set('per_page', '1'),
+    }).pipe(
+      map((res) => ({ abandonedCarts: res.total || 0 })),
+      catchError(() => of({ abandonedCarts: 0 })),
+    );
+
+    const activeCarts$ = this.http.get<any[]>(`${environment.apiUrl}/active-carts`, {
+      params: this.auth().set('minutes', '5'),
+    }).pipe(
+      map((carts) => ({ activeCarts: (carts || []).length })),
+      catchError(() => of({ activeCarts: 0 })),
+    );
+
+    return forkJoin([orders$, carts$, activeCarts$]).pipe(
+      map(([orders, carts, active]) => ({
+        ordersToday: orders.ordersToday,
+        revenueToday: orders.revenueToday,
+        activeCarts: active.activeCarts,
+        abandonedCarts: carts.abandonedCarts,
+      })),
     );
   }
 
@@ -71,16 +91,27 @@ export class ApiService {
 
   // ─── ACTIVE / ABANDONED CARTS (require plugin) ──────
 
-  getActiveCarts(): Observable<ActiveCart[]> {
-    return this.http.get<ActiveCart[]>(`${environment.apiUrl}/active-carts`, { params: this.auth() }).pipe(
+  getActiveCarts(minutes: number = 5): Observable<ActiveCart[]> {
+    return this.http.get<ActiveCart[]>(`${environment.apiUrl}/active-carts`, {
+      params: this.auth().set('minutes', minutes),
+    }).pipe(
       map((carts) => carts || []),
       catchError(() => of([] as ActiveCart[])),
     );
   }
 
-  getAbandonedCarts(): Observable<AbandonedCart[]> {
-    return this.http.get<AbandonedCart[]>(`${environment.apiUrl}/abandoned-carts`, { params: this.auth() }).pipe(
-      catchError(() => of([] as AbandonedCart[])),
+  getAbandonedCarts(filters?: { filter?: string; search?: string; sort?: string; order?: string; page?: number; perPage?: number }): Observable<any> {
+    let p = this.auth();
+    if (filters) {
+      if (filters.filter) p = p.set('filter', filters.filter);
+      if (filters.search) p = p.set('search', filters.search);
+      if (filters.sort) p = p.set('sort', filters.sort);
+      if (filters.order) p = p.set('order', filters.order);
+      if (filters.page) p = p.set('page', filters.page);
+      if (filters.perPage) p = p.set('per_page', filters.perPage);
+    }
+    return this.http.get<any>(`${environment.apiUrl}/abandoned-carts`, { params: p }).pipe(
+      catchError(() => of({ carts: [], total: 0, page: 1, perPage: 50, totalPages: 1 })),
     );
   }
 

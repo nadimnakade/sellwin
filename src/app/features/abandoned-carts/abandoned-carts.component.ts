@@ -1,13 +1,15 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { NgClass } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { UtilsService } from '../../core/services/utils.service';
 import { AbandonedCart } from '../../core/interfaces';
+import { whatsappConfig } from '../../../environments/environment';
 
 @Component({
   selector: 'app-abandoned-carts',
   standalone: true,
-  imports: [NgClass],
+  imports: [NgClass, FormsModule],
   template: `
     <div class="page-container">
       <div class="page-header">
@@ -22,6 +24,23 @@ import { AbandonedCart } from '../../core/interfaces';
           <button (click)="refresh()" class="btn-ghost">
             <i class="pi pi-refresh" [ngClass]="{'animate-spin': loading()}"></i>
           </button>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="glass-card p-4 mb-6">
+        <div class="flex flex-wrap items-center gap-3">
+          @for (f of filters; track f.key) {
+            <button (click)="setFilter(f.key)"
+                    [class]="f.key === activeFilter() ? 'btn-primary' : 'btn-ghost'">
+              {{ f.label }}
+            </button>
+          }
+          <div class="relative flex-1 min-w-[200px] ml-auto">
+            <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-sm"></i>
+            <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="onSearch()"
+                   placeholder="Search by name or phone..." class="input-field pl-9">
+          </div>
         </div>
       </div>
 
@@ -43,11 +62,21 @@ import { AbandonedCart } from '../../core/interfaces';
             <table class="w-full">
               <thead>
                 <tr class="border-b border-surface-200 dark:border-surface-700">
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Customer</th>
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Mobile</th>
-                  <th class="text-center px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Products</th>
-                  <th class="text-right px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Cart Value</th>
-                  <th class="text-right px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Abandoned Since</th>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-surface-500 uppercase cursor-pointer hover:text-surface-700" (click)="toggleSort('name')">
+                    Customer {{ sortIcon('name') }}
+                  </th>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-surface-500 uppercase cursor-pointer hover:text-surface-700" (click)="toggleSort('mobile')">
+                    Phone {{ sortIcon('mobile') }}
+                  </th>
+                  <th class="text-center px-4 py-3 text-xs font-semibold text-surface-500 uppercase cursor-pointer hover:text-surface-700" (click)="toggleSort('product_count')">
+                    Products {{ sortIcon('product_count') }}
+                  </th>
+                  <th class="text-right px-4 py-3 text-xs font-semibold text-surface-500 uppercase cursor-pointer hover:text-surface-700" (click)="toggleSort('cart_value')">
+                    Cart Value {{ sortIcon('cart_value') }}
+                  </th>
+                  <th class="text-right px-4 py-3 text-xs font-semibold text-surface-500 uppercase cursor-pointer hover:text-surface-700" (click)="toggleSort('last_activity')">
+                    Abandoned {{ sortIcon('last_activity') }}
+                  </th>
                   <th class="text-right px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Actions</th>
                 </tr>
               </thead>
@@ -55,17 +84,21 @@ import { AbandonedCart } from '../../core/interfaces';
                 @for (cart of carts(); track cart.id) {
                   <tr class="border-b border-surface-100 dark:border-surface-800 hover:bg-surface-50 dark:hover:bg-surface-800/30 transition">
                     <td class="px-4 py-3 text-sm font-medium text-surface-900 dark:text-white">{{ cart.name || 'Guest' }}</td>
-                    <td class="px-4 py-3 text-sm text-surface-600 dark:text-surface-400">{{ cart.mobile }}</td>
+                    <td class="px-4 py-3 text-sm">
+                      @if (cart.mobile) {
+                        <a [href]="getWhatsAppUrl(cart.mobile)" target="_blank" class="text-green-600 hover:text-green-700 font-semibold" title="Chat on WhatsApp">
+                          {{ cart.mobile }}
+                        </a>
+                      } @else {
+                        <span class="text-surface-400">—</span>
+                      }
+                    </td>
                     <td class="px-4 py-3 text-sm text-center text-surface-700 dark:text-surface-300">{{ cart.products }}</td>
                     <td class="px-4 py-3 text-sm text-right font-semibold text-surface-900 dark:text-white">{{ utils.formatCurrency(cart.cartValue) }}</td>
                     <td class="px-4 py-3 text-sm text-right text-surface-500">{{ cart.abandonedSince }}</td>
                     <td class="px-4 py-3 text-right">
                       <div class="flex items-center justify-end gap-2">
-                        <button (click)="utils.openWhatsApp(cart.mobile)"
-                                class="btn-ghost p-1.5 text-primary-600" title="Recover">
-                          <i class="pi pi-send"></i>
-                        </button>
-                        <button (click)="utils.openWhatsApp(cart.mobile, 'Hi, you recently added products to your cart on Sellwin. Can we help you complete your order?')"
+                        <button (click)="utils.openWhatsApp(cart.mobile, whatsappMsg)"
                                 class="btn-ghost p-1.5 text-green-600 hover:text-green-700" title="WhatsApp">
                           <i class="pi pi-whatsapp"></i>
                         </button>
@@ -77,8 +110,29 @@ import { AbandonedCart } from '../../core/interfaces';
             </table>
           </div>
 
-          <div class="px-4 py-3 border-t border-surface-200 dark:border-surface-700 text-sm text-surface-400">
-            Showing {{ carts().length }} abandoned cart(s)
+          <!-- Pagination -->
+          <div class="flex items-center justify-between px-4 py-3 border-t border-surface-200 dark:border-surface-700">
+            <span class="text-sm text-surface-400">
+              Showing {{ (currentPage() - 1) * perPage + 1 }}–{{ Math.min(currentPage() * perPage, totalCarts()) }} of {{ totalCarts() }}
+            </span>
+            <div class="flex items-center gap-2">
+              <button [disabled]="currentPage() <= 1" (click)="changePage(currentPage() - 1)"
+                      class="btn-ghost p-1.5 disabled:opacity-30">
+                <i class="pi pi-chevron-left"></i>
+              </button>
+              @for (p of pageNumbers(); track p) {
+                <button (click)="changePage(p)"
+                        [class.bg-primary-600!]="p === currentPage()"
+                        [class.text-white!]="p === currentPage()"
+                        class="w-8 h-8 rounded-lg text-sm font-medium hover:bg-surface-100 dark:hover:bg-surface-700 transition">
+                  {{ p }}
+                </button>
+              }
+              <button [disabled]="currentPage() >= totalPages()" (click)="changePage(currentPage() + 1)"
+                      class="btn-ghost p-1.5 disabled:opacity-30">
+                <i class="pi pi-chevron-right"></i>
+              </button>
+            </div>
           </div>
         }
       </div>
@@ -89,8 +143,29 @@ export class AbandonedCartsComponent implements OnInit {
   private api = inject(ApiService);
   utils = inject(UtilsService);
 
+  Math = Math;
+  whatsappMsg = whatsappConfig.followUpMessage;
+
   loading = signal(true);
   carts = signal<AbandonedCart[]>([]);
+  totalCarts = signal(0);
+  currentPage = signal(1);
+  totalPages = signal(1);
+  perPage = 20;
+  activeFilter = signal('all');
+  sortColumn = signal('last_activity');
+  sortDirection = signal<'ASC' | 'DESC'>('DESC');
+  searchTerm = '';
+  pageNumbers = signal<number[]>([]);
+
+  filters = [
+    { key: '5min', label: 'Last 5 min' },
+    { key: '10min', label: 'Last 10 min' },
+    { key: '30min', label: 'Last 30 min' },
+    { key: 'today', label: 'Today' },
+    { key: 'week', label: 'This Week' },
+    { key: 'all', label: 'All Time' },
+  ];
 
   ngOnInit(): void {
     this.loadCarts();
@@ -98,14 +173,65 @@ export class AbandonedCartsComponent implements OnInit {
 
   loadCarts(): void {
     this.loading.set(true);
-    this.api.getAbandonedCarts().subscribe({
-      next: (res) => { this.carts.set(res); this.loading.set(false); },
+    this.api.getAbandonedCarts({
+      filter: this.activeFilter(),
+      search: this.searchTerm || undefined,
+      sort: this.sortColumn(),
+      order: this.sortDirection(),
+      page: this.currentPage(),
+      perPage: this.perPage,
+    }).subscribe({
+      next: (res) => {
+        this.carts.set(res.carts || []);
+        this.totalCarts.set(res.total || 0);
+        this.totalPages.set(res.totalPages || 1);
+        this.updatePageNumbers();
+        this.loading.set(false);
+      },
       error: () => this.loading.set(false),
     });
   }
 
-  refresh(): void {
+  setFilter(key: string): void {
+    this.activeFilter.set(key);
+    this.currentPage.set(1);
     this.loadCarts();
+  }
+
+  toggleSort(col: string): void {
+    if (this.sortColumn() === col) {
+      this.sortDirection.set(this.sortDirection() === 'DESC' ? 'ASC' : 'DESC');
+    } else {
+      this.sortColumn.set(col);
+      this.sortDirection.set('DESC');
+    }
+    this.currentPage.set(1);
+    this.loadCarts();
+  }
+
+  sortIcon(col: string): string {
+    if (this.sortColumn() !== col) return '';
+    return this.sortDirection() === 'ASC' ? ' ▲' : ' ▼';
+  }
+
+  onSearch(): void {
+    this.currentPage.set(1);
+    this.loadCarts();
+  }
+
+  changePage(page: number): void {
+    if (page < 1 || page > this.totalPages()) return;
+    this.currentPage.set(page);
+    this.loadCarts();
+  }
+
+  refresh(): void {
+    this.currentPage.set(1);
+    this.loadCarts();
+  }
+
+  getWhatsAppUrl(mobile: string): string {
+    return `https://wa.me/${whatsappConfig.countryCode}${mobile}?text=${encodeURIComponent(this.whatsappMsg)}`;
   }
 
   exportCsv(): void {
@@ -117,5 +243,15 @@ export class AbandonedCartsComponent implements OnInit {
       'Abandoned Since': c.abandonedSince,
     }));
     this.utils.exportToCsv(data, `abandoned-carts-${new Date().toISOString().slice(0, 10)}`);
+  }
+
+  private updatePageNumbers(): void {
+    const total = this.totalPages();
+    const current = this.currentPage();
+    const pages: number[] = [];
+    const start = Math.max(1, current - 2);
+    const end = Math.min(total, current + 2);
+    for (let i = start; i <= end; i++) pages.push(i);
+    this.pageNumbers.set(pages);
   }
 }
