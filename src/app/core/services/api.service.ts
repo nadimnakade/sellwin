@@ -87,6 +87,12 @@ export class ApiService {
     );
   }
 
+  updateOrderStatus(id: number, status: string): Observable<OrderDetail> {
+    return this.http.put<any>(`${this.wc}/orders/${id}`, { status }, { params: this.auth() }).pipe(
+      map(mapWCOrderDetail),
+    );
+  }
+
   // ─── ACTIVE / ABANDONED CARTS (require plugin) ──────
 
   getActiveCarts(minutes: number = 5): Observable<ActiveCart[]> {
@@ -250,7 +256,7 @@ function mapWCOrder(o: any): Order {
     id: o.id,
     orderNumber: o.number || String(o.id),
     customerName: billingName || 'Guest',
-    mobile: o.billing?.phone || '',
+    mobile: formatIndianMobile(o.billing?.phone || ''),
     email: o.billing?.email || '',
     total: parseFloat(o.total || '0'),
     status: o.status || 'pending',
@@ -281,13 +287,13 @@ function mapWCOrderDetail(o: any): OrderDetail {
     paymentMethod: o.payment_method_title || '',
     customer: {
       name: [o.billing?.first_name, o.billing?.last_name].filter(Boolean).join(' ') || 'Guest',
-      mobile: o.billing?.phone || '',
+      mobile: formatIndianMobile(o.billing?.phone || ''),
       email: o.billing?.email || '',
     },
     billing: {
       firstName: o.billing?.first_name || '',
       lastName: o.billing?.last_name || '',
-      mobile: o.billing?.phone || '',
+      mobile: formatIndianMobile(o.billing?.phone || ''),
       email: o.billing?.email || '',
       address1: o.billing?.address_1 || '',
       address2: o.billing?.address_2 || '',
@@ -299,7 +305,7 @@ function mapWCOrderDetail(o: any): OrderDetail {
     shipping: {
       firstName: o.shipping?.first_name || '',
       lastName: o.shipping?.last_name || '',
-      mobile: o.shipping?.phone || '',
+      mobile: formatIndianMobile(o.shipping?.phone || ''),
       email: '',
       address1: o.shipping?.address_1 || '',
       address2: o.shipping?.address_2 || '',
@@ -316,4 +322,12 @@ function mapWCOrderDetail(o: any): OrderDetail {
     total: parseFloat(o.total || '0'),
     note: o.customer_note || '',
   };
+}
+
+function formatIndianMobile(mobile: string): string {
+  const digits = (mobile || '').replace(/[^0-9]/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('91')) return `+${digits}`;
+  if (digits.length === 10) return `+91${digits}`;
+  return mobile.startsWith('+') ? mobile : `+${digits}`;
 }

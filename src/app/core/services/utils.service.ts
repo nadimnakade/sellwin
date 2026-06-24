@@ -3,11 +3,18 @@ import { whatsappConfig } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class UtilsService {
+  formatIndianMobile(mobile: string): string {
+    const digits = (mobile || '').replace(/[^0-9]/g, '');
+    if (!digits) return '';
+    if (digits.startsWith('91')) return `+${digits}`;
+    if (digits.length === 10) return `+91${digits}`;
+    return mobile.startsWith('+') ? mobile : `+${digits}`;
+  }
+
   getWhatsAppUrl(mobile: string, message?: string): string {
-    const code = whatsappConfig.countryCode;
-    const cleanMobile = mobile.replace(/[^0-9]/g, '');
+    const cleanMobile = this.formatIndianMobile(mobile).replace(/[^0-9]/g, '');
     const text = message ? encodeURIComponent(message) : encodeURIComponent(whatsappConfig.followUpMessage);
-    return `${whatsappConfig.baseUrl}/${code}${cleanMobile}?text=${text}`;
+    return `${whatsappConfig.baseUrl}/${cleanMobile}?text=${text}`;
   }
 
   openWhatsApp(mobile: string, message?: string): void {
