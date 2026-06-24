@@ -98,10 +98,12 @@ import { whatsappConfig } from '../../../environments/environment';
                     <td class="px-4 py-3 text-sm text-right text-surface-500">{{ cart.abandonedSince }}</td>
                     <td class="px-4 py-3 text-right">
                       <div class="flex items-center justify-end gap-2">
-                        <button (click)="utils.openWhatsApp(cart.mobile, whatsappMsg)"
-                                class="btn-ghost p-1.5 text-green-600 hover:text-green-700" title="WhatsApp">
-                          <i class="pi pi-whatsapp"></i>
-                        </button>
+                        @if (cart.mobile) {
+                          <button (click)="utils.openWhatsApp(cart.mobile, whatsappMsg)"
+                                  class="btn-ghost p-1.5 text-green-600 hover:text-green-700" title="WhatsApp">
+                            <i class="pi pi-whatsapp"></i>
+                          </button>
+                        }
                       </div>
                     </td>
                   </tr>
