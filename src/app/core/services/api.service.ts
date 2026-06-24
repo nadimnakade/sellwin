@@ -30,7 +30,6 @@ export class ApiService {
       .set('after', today.toISOString())
       .set('per_page', '100');
 
-    // Get orders today from WooCommerce
     const orders$ = this.http.get<any[]>(`${this.wc}/orders`, { params }).pipe(
       map((orders) => {
         const revenueToday = orders.reduce((sum, o) => sum + parseFloat(o.total || '0'), 0);
@@ -38,12 +37,11 @@ export class ApiService {
       }),
     );
 
-    // Get active/abandoned carts from plugin (5-min threshold)
-    const carts$ = this.http.get<any>(`${environment.apiUrl}/abandoned-carts`, {
-      params: this.auth().set('filter', '5min').set('per_page', '1'),
+    const carts$ = this.http.get<any>(`${environment.apiUrl}/carts`, {
+      params: this.auth().set('idle_minutes', '1').set('per_page', '1'),
     }).pipe(
-      map((res) => ({ abandonedCarts: res.total || 0 })),
-      catchError(() => of({ abandonedCarts: 0 })),
+      map((res) => ({ latestCartChanges: res.total || 0 })),
+      catchError(() => of({ latestCartChanges: 0 })),
     );
 
     const activeCarts$ = this.http.get<any[]>(`${environment.apiUrl}/active-carts`, {
@@ -58,7 +56,7 @@ export class ApiService {
         ordersToday: orders.ordersToday,
         revenueToday: orders.revenueToday,
         activeCarts: active.activeCarts,
-        abandonedCarts: carts.abandonedCarts,
+        abandonedCarts: carts.latestCartChanges,
       })),
     );
   }
@@ -71,7 +69,7 @@ export class ApiService {
       if (paramsReq.page) p = p.set('page', String(paramsReq.page));
       if (paramsReq.perPage) p = p.set('per_page', String(paramsReq.perPage));
       if (paramsReq.status) p = p.set('status', paramsReq.status);
-      if (paramsReq.search) p = p.set('search', paramsReq.search);      
+      if (paramsReq.search) p = p.set('search', paramsReq.search);
     }
 
     return this.http.get<any[]>(`${this.wc}/orders`, { params: p, observe: 'response' }).pipe(
@@ -107,11 +105,49 @@ export class ApiService {
       if (filters.search) p = p.set('search', filters.search);
       if (filters.sort) p = p.set('sort', filters.sort);
       if (filters.order) p = p.set('order', filters.order);
-      if (filters.page) p = p.set('page', filters.page);
-      if (filters.perPage) p = p.set('per_page', filters.perPage);
+      if (filters.page) p = p.set('page', String(filters.page));
+      if (filters.perPage) p = p.set('per_page', String(filters.perPage));
     }
     return this.http.get<any>(`${environment.apiUrl}/abandoned-carts`, { params: p }).pipe(
       catchError(() => of({ carts: [], total: 0, page: 1, perPage: 50, totalPages: 1 })),
+    );
+  }
+
+  getCartBountyCarts(filters?: { page?: number; perPage?: number; status?: string; search?: string; orderby?: string; order?: string; idleMinutes?: number }): Observable<any> {
+    let p = this.auth();
+    if (filters) {
+      if (filters.page) p = p.set('page', String(filters.page));
+      if (filters.perPage) p = p.set('per_page', String(filters.perPage));
+      if (filters.status) p = p.set('status', filters.status);
+      if (filters.search) p = p.set('search', filters.search);
+      if (filters.orderby) p = p.set('orderby', filters.orderby);
+      if (filters.order) p = p.set('order', filters.order);
+      if (filters.idleMinutes) p = p.set('idle_minutes', String(filters.idleMinutes));
+    }
+    return this.http.get<any>(`${environment.apiUrl}/carts`, { params: p }).pipe(
+      catchError(() => of({ carts: [], total: 0, totalPages: 1 })),
+    );
+  }
+
+  getCartBountyCart(id: number): Observable<any> {
+    return this.http.get<any>(`${environment.apiUrl}/carts/${id}`, { params: this.auth() });
+  }
+
+  updateCartStatus(cartId: number, status: string): Observable<any> {
+    return this.http.post<any>(`${environment.apiUrl}/carts/${cartId}/status`, { status }, { params: this.auth() });
+  }
+
+  markWhatsAppContacted(cartId: number): Observable<any> {
+    return this.http.post<any>(`${environment.apiUrl}/carts/${cartId}/whatsapp`, {}, { params: this.auth() });
+  }
+
+  deleteCartBountyCart(cartId: number): Observable<any> {
+    return this.http.delete<any>(`${environment.apiUrl}/carts/${cartId}`, { params: this.auth() });
+  }
+
+  getCartBountyStats(): Observable<any> {
+    return this.http.get<any>(`${environment.apiUrl}/stats`, { params: this.auth() }).pipe(
+      catchError(() => of({ total: 0, active: 0, recovered: 0, total_value: 0 })),
     );
   }
 

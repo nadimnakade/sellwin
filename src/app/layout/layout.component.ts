@@ -107,7 +107,7 @@ export class LayoutComponent {
     { label: 'Dashboard', icon: 'pi pi-home', route: '/dashboard' },
     { label: 'Orders', icon: 'pi pi-shopping-cart', route: '/orders' },
     { label: 'Active Carts', icon: 'pi pi-clock', route: '/active-carts' },
-    { label: 'Abandoned Carts', icon: 'pi pi-exclamation-triangle', route: '/abandoned-carts' },
+    { label: 'Latest Cart Changes', icon: 'pi pi-exclamation-triangle', route: '/abandoned-carts' },
     { label: 'Customers', icon: 'pi pi-users', route: '/customers' },
     { label: 'Settings', icon: 'pi pi-cog', route: '/settings' },
   ];

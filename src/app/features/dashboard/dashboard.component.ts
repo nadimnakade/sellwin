@@ -70,13 +70,13 @@ import { DashboardStats, RevenueTrend, OrdersTrend, AbandonedTrend, TopProduct, 
 
           <div class="stat-card">
             <div class="flex items-center justify-between mb-3">
-              <span class="text-sm font-medium text-surface-500">Abandoned Carts</span>
+              <span class="text-sm font-medium text-surface-500">Latest Cart Changes</span>
               <div class="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
                 <i class="pi pi-exclamation-circle text-red-600 dark:text-red-400"></i>
               </div>
             </div>
             <p class="text-3xl font-bold text-surface-900 dark:text-white">{{ stats().abandonedCarts }}</p>
-            <p class="text-xs text-surface-400 mt-1">Needs attention</p>
+            <p class="text-xs text-surface-400 mt-1">Idle for 1 minute</p>
           </div>
         </div>
       }
@@ -158,9 +158,9 @@ import { DashboardStats, RevenueTrend, OrdersTrend, AbandonedTrend, TopProduct, 
           }
         </div>
 
-        <!-- Abandoned Cart Trend -->
+        <!-- Latest Cart Changes Trend -->
         <div class="glass-card p-6">
-          <h3 class="text-lg font-semibold text-surface-900 dark:text-white mb-4">Abandoned Cart Trend</h3>
+          <h3 class="text-lg font-semibold text-surface-900 dark:text-white mb-4">Latest Cart Changes Trend</h3>
           @if (abandonedTrend().length) {
             <div class="flex items-end gap-1 h-32">
               @for (item of abandonedTrend(); track item.date) {
