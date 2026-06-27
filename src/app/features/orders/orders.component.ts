@@ -89,7 +89,7 @@ import { Order } from '../../core/interfaces';
                   <tr class="border-b border-surface-100 dark:border-surface-800 hover:bg-surface-50 dark:hover:bg-surface-800/30 transition">
                     <td class="px-4 py-3 text-sm font-medium text-surface-900 dark:text-white">#{{ order.orderNumber }}</td>
                     <td class="px-4 py-3 text-sm text-surface-700 dark:text-surface-300">{{ order.customerName }}</td>
-                    <td class="px-4 py-3 text-sm text-surface-600 dark:text-surface-400">{{ order.mobile }}</td>
+                    <td class="px-4 py-3 text-sm text-surface-600 dark:text-surface-400">{{ utils.formatIndianMobile(order.mobile) }}</td>
                     <td class="px-4 py-3 text-sm font-semibold text-surface-900 dark:text-white">{{ utils.formatCurrency(order.total) }}</td>
                     <td class="px-4 py-3"><span [class]="utils.getStatusClass(order.status)">{{ utils.getStatusLabel(order.status) }}</span></td>
                     <td class="px-4 py-3 text-sm text-surface-500">{{ order.dateCreated | date:'dd MMM, hh:mm a' }}</td>
@@ -205,8 +205,9 @@ export class OrdersComponent implements OnInit {
     this.utils.exportToCsv(data, `orders-${new Date().toISOString().slice(0, 10)}`);
   }
 
-  downloadPdf(orderId: number): void {
-    this.api.getOrder(orderId).subscribe((order) => this.utils.downloadOrderPdf(order));
+  getInvoiceUrl(orderId: number): string {
+    const base = environment.apiUrl.replace('/wp-json/sellwin/v1', '');
+    return `${base}/?sellwin_invoice=1&order_id=${orderId}&consumer_key=${environment.consumerKey}&consumer_secret=${environment.consumerSecret}`;
   }
 
   private updatePageNumbers(): void {
