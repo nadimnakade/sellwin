@@ -205,9 +205,8 @@ export class OrdersComponent implements OnInit {
     this.utils.exportToCsv(data, `orders-${new Date().toISOString().slice(0, 10)}`);
   }
 
-  getInvoiceUrl(orderId: number): string {
-    const base = environment.apiUrl.replace('/wp-json/sellwin/v1', '');
-    return `${base}/?sellwin_invoice=1&order_id=${orderId}&consumer_key=${environment.consumerKey}&consumer_secret=${environment.consumerSecret}`;
+  downloadPdf(orderId: number): void {
+    this.api.getOrder(orderId).subscribe((order) => this.utils.downloadOrderPdf(order));
   }
 
   private updatePageNumbers(): void {
