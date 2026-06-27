@@ -53,17 +53,28 @@ interface CartBountyCart {
 
       <!-- Filters -->
       <div class="glass-card p-4 mb-6">
-        <div class="flex flex-wrap items-center gap-3">
-          @for (f of filters; track f.key) {
-            <button (click)="setFilter(f.key)"
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Time Range Filters -->
+          @for (f of timeRangeFilters; track f.key) {
+            <button (click)="setTimeFilter(f.key)"
                     [class]="f.key === activeFilter() ? 'btn-primary' : 'btn-ghost'">
               {{ f.label }}
             </button>
           }
-          <div class="relative flex-1 min-w-[200px] ml-auto">
-            <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-sm"></i>
-            <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="onSearch()"
-                   placeholder="Search by name, email, or phone..." class="input-field pl-9">
+          <div class="flex items-center gap-2 ml-auto">
+            <!-- Status Dropdown -->
+            <select [(ngModel)]="activeStatusFilter" (ngModelChange)="onStatusFilterChange()"
+                    class="text-xs px-3 py-2 rounded-lg border border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-800 text-surface-700 dark:text-surface-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+              @for (s of statusFilters; track s.key) {
+                <option [value]="s.key">{{ s.label }}</option>
+              }
+            </select>
+            <!-- Search -->
+            <div class="relative min-w-[180px]">
+              <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-sm"></i>
+              <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="onSearch()"
+                     placeholder="Search by name, email, or phone..." class="input-field pl-9">
+            </div>
           </div>
         </div>
       </div>
@@ -293,14 +304,25 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
   totalPages = signal(1);
   perPage = 20;
   activeFilter = signal('all');
+  activeStatusFilter = signal('');
   sortColumn = signal('time');
   sortDirection = signal<'asc' | 'desc'>('desc');
   searchTerm = '';
   pageNumbers = signal<number[]>([]);
   stats = signal({ total: 0, active: 0, recovered: 0, total_value: 0 });
 
-  filters = [
-    { key: 'all', label: 'All' },
+  timeRangeFilters = [
+    { key: '5m', label: '5 Mins' },
+    { key: '1h', label: '1 Hour' },
+    { key: 'today', label: 'Today' },
+    { key: 'week', label: 'This Week' },
+    { key: 'month', label: 'This Month' },
+    { key: 'year', label: 'This Year' },
+    { key: 'all', label: 'All Time' },
+  ];
+
+  statusFilters = [
+    { key: '', label: 'All Statuses' },
     { key: 'recoverable', label: 'Recoverable' },
     { key: 'recovered', label: 'Recovered' },
     { key: 'contacted', label: 'Contacted' },
@@ -324,14 +346,16 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
 
   loadCarts(): void {
     this.loading.set(true);
+    const timeRange = this.activeFilter() === 'all' ? '' : this.activeFilter();
     this.api.getCartBountyCarts({
       page: this.currentPage(),
       perPage: this.perPage,
-      status: this.activeFilter(),
+      status: this.activeStatusFilter() || undefined,
       search: this.searchTerm || undefined,
       orderby: this.sortColumn(),
       order: this.sortDirection(),
       idleMinutes: 1,
+      timeRange: timeRange || undefined,
     }).subscribe({
       next: (res) => {
         this.carts.set(res.carts || []);
@@ -351,8 +375,13 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
     });
   }
 
-  setFilter(key: string): void {
+  setTimeFilter(key: string): void {
     this.activeFilter.set(key);
+    this.currentPage.set(1);
+    this.loadCarts();
+  }
+
+  onStatusFilterChange(): void {
     this.currentPage.set(1);
     this.loadCarts();
   }

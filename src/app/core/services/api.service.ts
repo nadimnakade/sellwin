@@ -113,7 +113,7 @@ export class ApiService {
     );
   }
 
-  getCartBountyCarts(filters?: { page?: number; perPage?: number; status?: string; search?: string; orderby?: string; order?: string; idleMinutes?: number }): Observable<any> {
+  getCartBountyCarts(filters?: { page?: number; perPage?: number; status?: string; search?: string; orderby?: string; order?: string; idleMinutes?: number; timeRange?: string }): Observable<any> {
     let p = this.auth();
     if (filters) {
       if (filters.page) p = p.set('page', String(filters.page));
@@ -123,6 +123,7 @@ export class ApiService {
       if (filters.orderby) p = p.set('orderby', filters.orderby);
       if (filters.order) p = p.set('order', filters.order);
       if (filters.idleMinutes) p = p.set('idle_minutes', String(filters.idleMinutes));
+      if (filters.timeRange) p = p.set('time_range', filters.timeRange);
     }
     return this.http.get<any>(`${environment.apiUrl}/carts`, { params: p }).pipe(
       catchError(() => of({ carts: [], total: 0, totalPages: 1 })),

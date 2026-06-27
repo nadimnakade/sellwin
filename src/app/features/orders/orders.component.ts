@@ -4,7 +4,6 @@ import { DatePipe, NgClass } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
 import { UtilsService } from '../../core/services/utils.service';
 import { Order } from '../../core/interfaces';
-import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-orders',
@@ -99,9 +98,9 @@ import { environment } from '../../../environments/environment';
                         <a [routerLink]="['/orders', order.id]" class="btn-ghost p-1.5" title="View">
                           <i class="pi pi-eye"></i>
                         </a>
-                        <a [href]="getInvoiceUrl(order.id)" target="_blank" class="btn-ghost p-1.5 text-blue-600 hover:text-blue-700" title="Download Invoice">
+                        <button (click)="downloadPdf(order.id)" class="btn-ghost p-1.5 text-blue-600 hover:text-blue-700" title="Download PDF">
                           <i class="pi pi-file-pdf"></i>
-                        </a>
+                        </button>
                         <button (click)="utils.openWhatsApp(order.mobile)" class="btn-ghost p-1.5 text-green-600 hover:text-green-700" title="WhatsApp">
                           <i class="pi pi-whatsapp"></i>
                         </button>
@@ -206,9 +205,8 @@ export class OrdersComponent implements OnInit {
     this.utils.exportToCsv(data, `orders-${new Date().toISOString().slice(0, 10)}`);
   }
 
-  getInvoiceUrl(orderId: number): string {
-    const base = environment.apiUrl.replace('/wp-json/sellwin/v1', '');
-    return `${base}/?sellwin_invoice=1&order_id=${orderId}&consumer_key=${environment.consumerKey}&consumer_secret=${environment.consumerSecret}`;
+  downloadPdf(orderId: number): void {
+    this.api.getOrder(orderId).subscribe((order) => this.utils.downloadOrderPdf(order));
   }
 
   private updatePageNumbers(): void {

@@ -25,6 +25,12 @@ import { OrderDetail } from '../../core/interfaces';
           @if (order()?.status; as status) {
             <span [class]="utils.getStatusClass(status)">{{ utils.getStatusLabel(status) }}</span>
           }
+          @if (order()) {
+            <button (click)="downloadPdf()" class="btn-ghost">
+              <i class="pi pi-file-pdf"></i>
+              Download PDF
+            </button>
+          }
         </div>
       </div>
 
@@ -168,5 +174,11 @@ export class OrderDetailComponent implements OnInit {
         error: () => this.loading.set(false),
       });
     }
+  }
+
+  downloadPdf(): void {
+    const current = this.order();
+    if (!current) return;
+    this.utils.downloadOrderPdf(current);
   }
 }
