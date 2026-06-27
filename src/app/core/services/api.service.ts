@@ -40,12 +40,12 @@ export class ApiService {
     const carts$ = this.http.get<any>(`${environment.apiUrl}/carts`, {
       params: this.auth().set('idle_minutes', '1').set('per_page', '1'),
     }).pipe(
-      map((res) => ({ latestCartChanges: res.total || 0 })),
-      catchError(() => of({ latestCartChanges: 0 })),
+      map((res) => ({ latestCarts: res.total || 0 })),
+      catchError(() => of({ latestCarts: 0 })),
     );
 
     const activeCarts$ = this.http.get<any[]>(`${environment.apiUrl}/active-carts`, {
-      params: this.auth().set('minutes', '5'),
+      params: this.auth().set('minutes', '1'),
     }).pipe(
       map((carts) => ({ activeCarts: (carts || []).length })),
       catchError(() => of({ activeCarts: 0 })),
@@ -56,7 +56,7 @@ export class ApiService {
         ordersToday: orders.ordersToday,
         revenueToday: orders.revenueToday,
         activeCarts: active.activeCarts,
-        abandonedCarts: carts.latestCartChanges,
+        latestCarts: carts.latestCarts,
       })),
     );
   }

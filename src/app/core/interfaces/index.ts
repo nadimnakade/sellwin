@@ -2,7 +2,7 @@ export interface DashboardStats {
   ordersToday: number;
   revenueToday: number;
   activeCarts: number;
-  abandonedCarts: number;
+  latestCarts: number;
 }
 
 export interface Order {

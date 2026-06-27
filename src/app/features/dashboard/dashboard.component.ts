@@ -75,7 +75,7 @@ import { DashboardStats, RevenueTrend, OrdersTrend, AbandonedTrend, TopProduct, 
                 <i class="pi pi-exclamation-circle text-red-600 dark:text-red-400"></i>
               </div>
             </div>
-            <p class="text-3xl font-bold text-surface-900 dark:text-white">{{ stats().abandonedCarts }}</p>
+            <p class="text-3xl font-bold text-surface-900 dark:text-white">{{ stats().latestCarts }}</p>
             <p class="text-xs text-surface-400 mt-1">Idle for 1 minute</p>
           </div>
         </div>
@@ -214,7 +214,7 @@ export class DashboardComponent implements OnInit {
   utils = inject(UtilsService);
 
   loading = signal(true);
-  stats = signal<DashboardStats>({ ordersToday: 0, revenueToday: 0, activeCarts: 0, abandonedCarts: 0 });
+  stats = signal<DashboardStats>({ ordersToday: 0, revenueToday: 0, activeCarts: 0, latestCarts: 0 });
   revenueTrend = signal<RevenueTrend[]>([]);
   ordersTrend = signal<OrdersTrend[]>([]);
   abandonedTrend = signal<AbandonedTrend[]>([]);

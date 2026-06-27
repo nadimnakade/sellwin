@@ -30,7 +30,7 @@ export const routes: Routes = [
         loadComponent: () => import('./features/active-carts/active-carts.component').then((c) => c.ActiveCartsComponent),
       },
       {
-        path: 'abandoned-carts',
+        path: 'latest-carts',
         loadComponent: () => import('./features/abandoned-carts/abandoned-carts.component').then((c) => c.AbandonedCartsComponent),
       },
       {

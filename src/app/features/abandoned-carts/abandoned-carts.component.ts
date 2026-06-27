@@ -125,7 +125,7 @@ interface CartBountyCart {
                 <tr class="border-b border-surface-200 dark:border-surface-700">
                   <th class="text-left px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Customer</th>
                   <th class="text-left px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Contact</th>
-                  <th class="text-center px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Cart Items</th>
+                  th>
                   <th class="text-right px-4 py-3 text-xs font-semibold text-surface-500 uppercase cursor-pointer hover:text-surface-700" (click)="toggleSort('cart_total')">
                     Cart Total {{ sortIcon('cart_total') }}
                   </th>
@@ -172,7 +172,7 @@ interface CartBountyCart {
                       }
                     </td>
 
-                    <!-- Cart Items -->
+                    <!-- Cart Items 
                     <td class="px-4 py-3">
                       <div class="flex items-center justify-center gap-1">
                         @for (item of cart.products.slice(0, 4); track item.product_id) {
@@ -191,7 +191,7 @@ interface CartBountyCart {
                         <span class="text-xs text-surface-400 ml-2">{{ cart.products.length }} items</span>
                       </div>
                     </td>
-
+                    -->
                     <!-- Cart Total -->
                     <td class="px-4 py-3 text-right">
                       <span class="text-sm font-bold text-surface-900 dark:text-white">{{ utils.formatCurrency(cart.cart_total) }}</span>
