@@ -461,7 +461,7 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
       consumer_key: environment.consumerKey,
       consumer_secret: environment.consumerSecret,
     });
-    window.open(`https://deepskyblue-peafowl-120684.hostingersite.com/wp-admin/admin.php?page=cartbounty&action=download_pdf&id=${cartId}&${params.toString()}`, '_blank');
+    window.open(`${environment.apiUrl}/carts/${cartId}/download?${params.toString()}`, '_blank');
   }
 
   deleteCart(cartId: number): void {
