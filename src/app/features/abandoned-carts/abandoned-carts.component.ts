@@ -465,6 +465,7 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
       </tr>
     `).join('');
 
+    win.document.open();
     win.document.write(`
       <!doctype html>
       <html>
