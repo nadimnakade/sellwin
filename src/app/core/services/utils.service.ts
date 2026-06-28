@@ -197,7 +197,7 @@ export class UtilsService {
       .join(', ');
   }
 
-  private escapeHtml(value: string): string {
+  escapeHtml(value: string): string {
     return String(value || '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
