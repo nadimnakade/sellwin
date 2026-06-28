@@ -18,6 +18,7 @@ interface CartBountyCart {
     quantity: number;
     price: number;
     thumbnail: string;
+    sku: string;
   }>;
   cart_total: number;
   currency: string;
@@ -172,26 +173,7 @@ interface CartBountyCart {
                       }
                     </td>
 
-                    <!-- Cart Items 
-                    <td class="px-4 py-3">
-                      <div class="flex items-center justify-center gap-1">
-                        @for (item of cart.products.slice(0, 4); track item.product_id) {
-                          @if (item.thumbnail) {
-                            <img [src]="item.thumbnail" class="w-8 h-8 rounded object-cover border border-surface-200 dark:border-surface-700"
-                                 [alt]="item.title" loading="lazy">
-                          } @else {
-                            <div class="w-8 h-8 rounded bg-surface-200 dark:bg-surface-700 flex items-center justify-center text-[10px] text-surface-500">
-                              {{ item.quantity }}x
-                            </div>
-                          }
-                        }
-                        @if (cart.products && cart.products.length > 4) {
-                          <span class="text-xs text-surface-400 ml-1">+{{ cart.products.length - 4 }}</span>
-                        }
-                        <span class="text-xs text-surface-400 ml-2">{{ cart.products.length }} items</span>
-                      </div>
-                    </td>
-                    -->
+                   
                     <!-- Cart Total -->
                     <td class="px-4 py-3 text-right">
                       <span class="text-sm font-bold text-surface-900 dark:text-white">{{ utils.formatCurrency(cart.cart_total) }}</span>
@@ -459,62 +441,126 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
   downloadPdf(cartId: number): void {
     const cart = this.carts().find(c => c.id === cartId);
     if (!cart) return;
-    const name = this.getFullName(cart) || 'Guest';
+
+    const win = window.open('', '_blank', 'noopener,noreferrer,width=1100,height=800');
+    if (!win) return;
+
+    const name = ((cart.name || '') + ' ' + (cart.surname || '')).trim();
     const items = cart.products || [];
-    const itemRows = items.map((p, i) => `
+    const itemRows = items.map((item, index) => `
       <tr>
-        <td style="padding:8px 12px;border-bottom:1px solid #eee">${i + 1}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #eee">${p.title}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center">${p.quantity}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right">${this.utils.formatCurrency(p.price)}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right">${this.utils.formatCurrency(p.price * p.quantity)}</td>
+        <td>
+          <div class="product">
+            ${item.thumbnail ? `<img src="${item.thumbnail}" alt="${item.title}">` : '<div class="image-fallback">No image</div>'}
+            <div>
+              <div class="product-title">${item.title}</div>
+              <div class="muted">Product ID: ${item.product_id}</div>
+            </div>
+          </div>
+        </td>
+        <td>${item.sku || 'N/A'}</td>
+        <td>${this.utils.formatCurrency(item.price)}</td>
+        <td>${item.quantity}</td>
+        <td>${this.utils.formatCurrency(item.price * item.quantity)}</td>
       </tr>
     `).join('');
 
-    const win = window.open('', '_blank');
-    if (!win) { alert('Please allow pop-ups for PDF download'); return; }
     win.document.write(`
-      <!DOCTYPE html>
+      <!doctype html>
       <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Abandoned Cart #${cartId}</title>
-        <style>
-          body{font-family:Arial,sans-serif;margin:40px;color:#333}
-          h1{color:#2563eb;border-bottom:2px solid #eee;padding-bottom:10px}
-          .info{margin:20px 0;width:100%}
-          .info td{padding:4px 12px 4px 0}
-          table.products{width:100%;border-collapse:collapse;margin:20px 0}
-          table.products th{background:#f3f4f6;padding:8px 12px;text-align:left;font-size:13px;text-transform:uppercase}
-          table.products td{padding:8px 12px}
-          .total{font-size:18px;font-weight:bold;color:#2563eb}
-          .footer{margin-top:30px;font-size:12px;color:#999;border-top:1px solid #eee;padding-top:10px}
-          @media print{body{margin:20mm}button{display:none}}
-          button{margin:20px 0;padding:10px 24px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px}
-        </style>
-      </head>
-      <body>
-        <button onclick="window.print()">Save as PDF</button>
-        <h1>Abandoned Cart #${cartId}</h1>
-        <table class="info">
-          <tr><td><strong>Name:</strong></td><td>${name}</td></tr>
-          ${cart.email ? `<tr><td><strong>Email:</strong></td><td>${cart.email}</td></tr>` : ''}
-          ${cart.phone ? `<tr><td><strong>Phone:</strong></td><td>${cart.phone}</td></tr>` : ''}
-          <tr><td><strong>Last Activity:</strong></td><td>${cart.time}</td></tr>
-          <tr><td><strong>Status:</strong></td><td>${cart.contacted_status || 'Pending'}</td></tr>
-        </table>
-        ${items.length ? `
-          <table class="products">
-            <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead>
+        <head>
+          <meta charset="utf-8">
+          <title>Abandoned Cart #${cartId}.pdf</title>
+          <style>
+            *{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111827;margin:0;background:#fff;padding:28px}
+            .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111827;padding-bottom:18px;margin-bottom:20px}
+            .brand{display:flex;align-items:center;gap:12px}
+            .logo{width:54px;height:54px;border-radius:14px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px}
+            .brand h1{margin:0;font-size:26px}
+            .meta{text-align:right}
+            .meta h2{margin:0 0 8px;font-size:20px}
+            .muted{color:#64748b;font-size:12px}
+            .summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px}
+            .box{border:1px solid #e5e7eb;border-radius:10px;padding:14px;min-height:96px}
+            .box-title{font-size:11px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:8px}
+            .box strong{display:block;margin-bottom:4px}
+            table{width:100%;border-collapse:collapse}
+            thead{background:#f8fafc}
+            th{font-size:11px;text-transform:uppercase;color:#64748b;text-align:left;padding:12px;border-bottom:1px solid #e5e7eb}
+            td{padding:12px;border-bottom:1px solid #e5e7eb;vertical-align:middle}
+            th:nth-child(n+2),td:nth-child(n+2){text-align:right}
+            .product{display:flex;align-items:center;gap:12px}
+            .product img,.image-fallback{width:58px;height:58px;border-radius:8px;border:1px solid #e5e7eb;object-fit:cover}
+            .image-fallback{display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:10px}
+            .product-title{font-weight:700}
+            .totals{width:320px;margin:20px 0 0 auto}
+            .line{display:flex;justify-content:space-between;padding:7px 0}
+            .grand{border-top:2px solid #111827;margin-top:8px;padding-top:12px;font-size:20px;font-weight:800}
+            .footer{margin-top:28px;text-align:center;color:#64748b;font-size:11px}
+            @media print{body{padding:0}.box,.product{break-inside:avoid}thead{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="brand">
+              <div class="logo">SW</div>
+              <div>
+                <h1>Sellwin</h1>
+                <div class="muted">Abandoned cart summary</div>
+              </div>
+            </div>
+            <div class="meta">
+              <h2>Cart #${cart.id}</h2>
+              <div><strong>Date:</strong> ${new Date(cart.time).toLocaleString('en-IN')}</div>
+              <div><strong>Status:</strong> ${cart.contacted_status || 'Pending'}</div>
+            </div>
+          </div>
+
+          <div class="summary">
+            <div class="box">
+              <div class="box-title">Customer</div>
+              <strong>${name || 'Guest'}</strong>
+              <div>${cart.email || 'N/A'}</div>
+              <div>${cart.phone || 'N/A'}</div>
+            </div>
+            <div class="box">
+              <div class="box-title">Payment</div>
+              <strong>N/A</strong>
+              <div class="muted">Paid: N/A</div>
+            </div>
+            <div class="box">
+              <div class="box-title">Shipping</div>
+              <div>Same as billing</div>
+            </div>
+          </div>
+
+          <table>
+            <thead><tr><th>Title</th><th>SKU</th><th>Price</th><th>Qty</th><th>Total</th></tr></thead>
             <tbody>${itemRows}</tbody>
           </table>
-          <p class="total">Total: ${this.utils.formatCurrency(cart.cart_total)}</p>
-        ` : '<p>No products in cart</p>'}
-        <p class="footer">Generated by Sellwin Admin on ${new Date().toLocaleString()}</p>
-      </body>
+
+          <div class="totals">
+            <div class="line"><span>Subtotal</span><span>${this.utils.formatCurrency(cart.cart_total)}</span></div>
+            <div class="line"><span>Discount</span><span>-${this.utils.formatCurrency(0)}</span></div>
+            <div class="line"><span>Tax</span><span>${this.utils.formatCurrency(0)}</span></div>
+            <div class="line"><span>Shipping</span><span>${this.utils.formatCurrency(0)}</span></div>
+            <div class="line grand"><span>Total</span><span>${this.utils.formatCurrency(cart.cart_total)}</span></div>
+          </div>
+
+          <div class="footer">Generated by Sellwin on ${new Date().toLocaleString('en-IN')}</div>
+        </body>
       </html>
     `);
     win.document.close();
+
+    const print = () => {
+      win.document.title = `Cart-${cart.id}.pdf`;
+      win.focus();
+      win.print();
+    };
+
+    win.onload = print;
+    setTimeout(print, 600);
   }
 
   deleteCart(cartId: number): void {
