@@ -324,19 +324,62 @@ export class OrderDetailComponent implements OnInit {
     };
 
     const loadImage = (url: string): Promise<string | null> =>
-      new Promise((resolve) => {
-        if (!url) return resolve(null);
-        fetch(url)
-          .then(res => res.ok ? res.blob() : null)
-          .then(blob => {
-            if (!blob) return resolve(null);
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = () => resolve(null);
-            reader.readAsDataURL(blob);
-          })
-          .catch(() => resolve(null));
-      });
+    new Promise((resolve) => {
+
+      if (!url) {
+        resolve(null);
+        return;
+      }
+
+      const img = new Image();
+
+      img.crossOrigin = 'anonymous';
+
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+
+          const ctx = canvas.getContext('2d');
+
+          if (!ctx) {
+            resolve(null);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0);
+
+          resolve(canvas.toDataURL('image/jpeg', 0.95));
+
+        } catch (e) {
+          console.error('Canvas conversion failed', e);
+          resolve(null);
+        }
+      };
+
+      img.onerror = () => {
+        console.error('Image failed:', url);
+        resolve(null);
+      };
+
+      img.src = url;
+
+    });
+    // const loadImage = (url: string): Promise<string | null> =>
+    //   new Promise((resolve) => {
+    //     if (!url) return resolve(null);
+    //     fetch(url)
+    //       .then(res => res.ok ? res.blob() : null)
+    //       .then(blob => {
+    //         if (!blob) return resolve(null);
+    //         const reader = new FileReader();
+    //         reader.onloadend = () => resolve(reader.result as string);
+    //         reader.onerror = () => resolve(null);
+    //         reader.readAsDataURL(blob);
+    //       })
+    //       .catch(() => resolve(null));
+    //   });
 
     const drawRow = (item: OrderItem, index: number, imgDataUrl: string | null): number => {
       const rowH = 22;
@@ -365,7 +408,12 @@ export class OrderDetailComponent implements OnInit {
       // Product image
       if (imgDataUrl) {
         try {
-          pdf.addImage(imgDataUrl, 'JPEG', colX[1] + 1, y + 1, 20, rowH - 2);
+
+          const format = imgDataUrl.startsWith('data:image/png') ? 'PNG' :
+                        imgDataUrl.startsWith('data:image/webp') ? 'WEBP' : 'JPEG';
+
+          pdf.addImage(imgDataUrl,format,colX[1] + 1,y + 1,20,rowH - 2);
+          //pdf.addImage(imgDataUrl, 'JPEG', colX[1] + 1, y + 1, 20, rowH - 2);
           pdf.setDrawColor(200, 200, 200);
           pdf.setLineWidth(0.2);
           pdf.rect(colX[1] + 1, y + 1, 20, rowH - 2, 'S');
