@@ -247,6 +247,7 @@ export class OrderDetailComponent implements OnInit {
 
   downloadPdf(): void {
     const order = this.order();
+    console.log(order);
     if (!order) return;
 
     const pdf = new jsPDF('p', 'mm', 'a4');
