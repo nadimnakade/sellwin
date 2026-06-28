@@ -607,7 +607,7 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
 
     const name = ((cart.name || '') + ' ' + (cart.surname || '')).trim();
     const items = cart.products || [];
-
+    console.log(items);
     // Wait until every image is loaded
     await Promise.all(
       items
