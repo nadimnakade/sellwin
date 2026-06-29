@@ -97,10 +97,7 @@ import { Order } from '../../core/interfaces';
                       <div class="flex items-center justify-end gap-2">
                         <a [routerLink]="['/orders', order.id]" class="btn-ghost p-1.5" title="View">
                           <i class="pi pi-eye"></i>
-                        </a>
-                        <button (click)="downloadPdf(order.id)" class="btn-ghost p-1.5 text-blue-600 hover:text-blue-700" title="Download PDF">
-                          <i class="pi pi-file-pdf"></i>
-                        </button>
+                        </a>                        
                         <button (click)="utils.openWhatsApp(order.mobile)" class="btn-ghost p-1.5 text-green-600 hover:text-green-700" title="WhatsApp">
                           <i class="pi pi-whatsapp"></i>
                         </button>

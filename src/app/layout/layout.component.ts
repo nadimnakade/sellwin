@@ -16,15 +16,17 @@ interface NavItem {
   template: `
     <div class="flex h-screen overflow-hidden bg-surface-50 dark:bg-surface-950">
       <!-- Sidebar Overlay -->
-      @if (sidebarOpen()) {
-        <div class="fixed inset-0 bg-black/40 z-20 lg:hidden" (click)="sidebarOpen.set(false)"></div>
-      }
+      <div class="fixed inset-0 bg-black/40 z-20 transition-opacity duration-300"
+           [class.opacity-0]="!sidebarOpen()"
+           [class.pointer-events-none]="!sidebarOpen()"
+           [class.opacity-100]="sidebarOpen()"
+           (click)="sidebarOpen.set(false)"></div>
 
       <!-- Sidebar -->
       <aside [ngClass]="{
         'translate-x-0': sidebarOpen(),
         '-translate-x-full': !sidebarOpen()
-      }" class="fixed lg:static inset-y-0 left-0 z-30 w-64 lg:translate-x-0 transition-transform duration-300 flex flex-col bg-white dark:bg-surface-900 border-r border-surface-200 dark:border-surface-800">
+      }" class="fixed inset-y-0 left-0 z-30 w-64 transition-transform duration-300 ease-out flex flex-col bg-white dark:bg-surface-900 border-r border-surface-200 dark:border-surface-800">
         <!-- Logo -->
         <div class="flex items-center gap-3 px-6 h-16 border-b border-surface-200 dark:border-surface-800">
           <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
@@ -60,7 +62,7 @@ interface NavItem {
       <div class="flex-1 flex flex-col overflow-hidden">
         <!-- Top Header -->
         <header class="h-16 bg-white dark:bg-surface-900 border-b border-surface-200 dark:border-surface-800 flex items-center justify-between px-4 lg:px-6">
-          <button (click)="sidebarOpen.set(!sidebarOpen())" class="lg:hidden p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800">
+          <button (click)="sidebarOpen.set(!sidebarOpen())" class="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800">
             <i class="pi pi-bars text-lg text-surface-600 dark:text-surface-400"></i>
           </button>
 
@@ -113,6 +115,7 @@ export class LayoutComponent {
   ];
 
   constructor() {
+    this.sidebarOpen.set(window.innerWidth >= 1024);
     this.updateTime();
     setInterval(() => this.updateTime(), 60000);
   }

@@ -1,6 +1,8 @@
 import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { NgClass, TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import jsPDF from 'jspdf';
 import { ApiService } from '../../core/services/api.service';
 import { UtilsService } from '../../core/services/utils.service';
 import { whatsappConfig, environment } from '../../../environments/environment';
@@ -33,7 +35,7 @@ interface CartBountyCart {
 @Component({
   selector: 'app-abandoned-carts',
   standalone: true,
-  imports: [NgClass, FormsModule, TitleCasePipe],
+  imports: [NgClass, FormsModule, TitleCasePipe, RouterLink],
   template: `
     <div class="page-container">
       <div class="page-header">
@@ -205,6 +207,11 @@ interface CartBountyCart {
                     <!-- Actions -->
                     <td class="px-4 py-3 text-right">
                       <div class="flex items-center justify-end gap-1">
+                        <a [routerLink]="['/latest-carts', cart.id]"
+                           class="p-1.5 rounded-md text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-700 transition"
+                           title="View">
+                          <i class="pi pi-eye"></i>
+                        </a>
                         <button (click)="cart.phone && utils.openWhatsApp(cart.phone, whatsappMsg)"
                                 [disabled]="!cart.phone"
                                 class="p-1.5 rounded-md text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition disabled:opacity-30 disabled:cursor-not-allowed"
@@ -437,455 +444,172 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
     });
   }
 
-  private async imageToBase64(url: string): Promise<string> {
-    try {
-      const response = await fetch(url, { mode: 'cors' });
+  downloadPdf(cartId: number): void {
+    this.api.getCartDetail(cartId).subscribe({
+      next: (order) => {
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pageW = 210;
+        const margin = 20;
+        const contentW = pageW - margin * 2;
+        let y = margin;
 
-      if (!response.ok) {
-        throw new Error('Image download failed');
-      }
+        const font = 'helvetica';
+        const darkColor: [number, number, number] = [30, 30, 30];
+        const grayColor: [number, number, number] = [100, 100, 100];
 
-      const blob = await response.blob();
+        const colX = [20, 30, 52, 140, 154];
+        const colW = [10, 22, 88, 14, 36];
 
-      return await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-    } catch (e) {
-      console.error('Unable to convert image', url, e);
-      return '';
-    }
+        const formatDate = (dateStr: string): string => {
+          if (!dateStr) return '-';
+          const d = new Date(dateStr);
+          return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        };
+
+        const drawHeader = (): void => {
+          y = margin;
+          pdf.setFillColor(30, 30, 30);
+          pdf.roundedRect(margin, y, 14, 14, 3, 3, 'F');
+          pdf.setFont(font, 'bold');
+          pdf.setFontSize(11);
+          pdf.setTextColor(255, 255, 255);
+          pdf.text('SW', margin + 7, y + 8.5, { align: 'center' });
+          pdf.setFontSize(16);
+          pdf.setTextColor(...darkColor);
+          pdf.text('SELLWIN', margin + 18, y + 10);
+          y += 22;
+
+          pdf.setFont(font, 'normal');
+          pdf.setFontSize(9);
+          pdf.setTextColor(...grayColor);
+          pdf.text('Cart Number:', margin, y);
+          pdf.setTextColor(...darkColor);
+          pdf.setFont(font, 'bold');
+          pdf.text(String(order.orderNumber), margin + 24, y);
+
+          pdf.setFont(font, 'normal');
+          pdf.setTextColor(...grayColor);
+          pdf.text('Date:', margin + 80, y);
+          pdf.setTextColor(...darkColor);
+          pdf.setFont(font, 'bold');
+          pdf.text(formatDate(order.dateCreated), margin + 92, y);
+          y += 10;
+        };
+
+        const drawTableHeader = (): void => {
+          const headerH = 8;
+          pdf.setFillColor(30, 30, 30);
+          pdf.rect(margin, y, contentW, headerH, 'F');
+          pdf.setFont(font, 'bold');
+          pdf.setTextColor(255, 255, 255);
+          pdf.setFontSize(7);
+          pdf.text('No.', colX[0] + 3, y + 5.5);
+          pdf.text('Product', colX[1] + 2, y + 5.5);
+          pdf.text('Item', colX[2] + 2, y + 5.5);
+          pdf.text('Qty', colX[3] + colW[3] / 2, y + 5.5, { align: 'center' });
+          pdf.text('Amount', colX[4] + colW[4] - 2, y + 5.5, { align: 'right' });
+          y += headerH;
+        };
+
+        const drawRow = (item: any, index: number, imgDataUrl: string | null): number => {
+          const rowH = 22;
+          const textY = y + 5;
+
+          if (index % 2 === 0) {
+            pdf.setFillColor(245, 245, 245);
+            pdf.rect(margin, y, contentW, rowH, 'F');
+          }
+
+          pdf.setDrawColor(220, 220, 220);
+          pdf.setLineWidth(0.2);
+          pdf.rect(margin, y, contentW, rowH, 'S');
+
+          [colX[1], colX[2], colX[3], colX[4]].forEach(cx => {
+            pdf.line(cx, y, cx, y + rowH);
+          });
+
+          pdf.setFont(font, 'normal');
+          pdf.setFontSize(8);
+          pdf.setTextColor(...darkColor);
+          pdf.text(String(index + 1), colX[0] + colW[0] / 2, y + rowH / 2 + 1, { align: 'center' });
+
+          if (imgDataUrl) {
+            try {
+              const format = imgDataUrl.startsWith('data:image/png') ? 'PNG' :
+                            imgDataUrl.startsWith('data:image/webp') ? 'WEBP' : 'JPEG';
+              pdf.addImage(imgDataUrl, format, colX[1] + 1, y + 1, 20, rowH - 2);
+              pdf.setDrawColor(200, 200, 200);
+              pdf.setLineWidth(0.2);
+              pdf.rect(colX[1] + 1, y + 1, 20, rowH - 2, 'S');
+            } catch { /* skip broken image */ }
+          }
+
+          pdf.setFont(font, 'bold');
+          pdf.setFontSize(7);
+          pdf.setTextColor(...darkColor);
+          const maxNameW = colW[2] - 4;
+          const nameLines = pdf.splitTextToSize(item.name, maxNameW);
+          pdf.text(nameLines[0] || item.name, colX[2] + 2, textY);
+
+          if (item.sku) {
+            pdf.setFont(font, 'normal');
+            pdf.setFontSize(6.5);
+            pdf.setTextColor(...grayColor);
+            const skuMax = pdf.splitTextToSize(item.sku, maxNameW);
+            pdf.text(skuMax[0] || item.sku, colX[2] + 2, textY + 5);
+          }
+
+          pdf.setFont(font, 'normal');
+          pdf.setFontSize(8);
+          pdf.setTextColor(...darkColor);
+          pdf.text(String(item.quantity), colX[3] + colW[3] / 2, y + rowH / 2 + 1, { align: 'center' });
+
+          pdf.setFontSize(7.5);
+          const amt = this.utils.formatCurrency(item.subtotal);
+          pdf.text(amt, colX[4] + colW[4] - 2, y + rowH / 2 + 1, { align: 'right' });
+
+          return rowH;
+        };
+
+        const drawGrandTotal = (): void => {
+          y += 1;
+          pdf.setDrawColor(30, 30, 30);
+          pdf.setLineWidth(0.5);
+          pdf.line(margin + 100, y, margin + contentW, y);
+          y += 7;
+          pdf.setFont(font, 'bold');
+          pdf.setFontSize(9);
+          pdf.setTextColor(...darkColor);
+          pdf.text('Grand Total', margin + 110, y);
+          pdf.text(this.utils.formatCurrency(order.total), margin + contentW - 2, y, { align: 'right' });
+        };
+
+        const checkPage = (needed: number): void => {
+          if (y + needed > 297 - margin) {
+            pdf.addPage();
+            y = margin;
+            drawTableHeader();
+          }
+        };
+
+        drawHeader();
+        drawTableHeader();
+
+        order.products.forEach((item: any, i: number) => {
+          checkPage(24);
+          const rh = drawRow(item, i, item.imageBase64);
+          y += rh;
+        });
+
+        checkPage(18);
+        drawGrandTotal();
+
+        pdf.save(`Cart-${order.orderNumber}.pdf`);
+      },
+      error: () => {},
+    });
   }
 
-  //   downloadPdf(cartId: number): void {
-  //     const cart = this.carts().find(c => c.id === cartId);
-  //     if (!cart) return;
-
-  //     const win = window.open('', '_blank', 'noopener,noreferrer,width=1100,height=800');
-  //     if (!win) {
-  //         alert('Please allow pop-ups for PDF download');
-  //         return;
-  //     }
-
-  //     const name = ((cart.name || '') + ' ' + (cart.surname || '')).trim();
-  //     const items = cart.products || [];
-  //     const itemRows = items.map((item, index) => `
-  //       <tr>
-  //         <td>
-  //           <div class="product">
-  //             ${item.thumbnail ? `<img src="${item.thumbnail}" alt="${item.title}">` : '<div class="image-fallback">No image</div>'}
-  //             <div>
-  //               <div class="product-title">${item.title}</div>
-  //               <div class="muted">Product ID: ${item.product_id}</div>
-  //             </div>
-  //           </div>
-  //         </td>
-  //         <td>${item.sku || 'N/A'}</td>
-  //         <td>${this.utils.formatCurrency(item.price)}</td>
-  //         <td>${item.quantity}</td>
-  //         <td>${this.utils.formatCurrency(item.price * item.quantity)}</td>
-  //       </tr>
-  //     `).join('');
-
-  //     // Generate HTML content
-  //     const htmlContent = `
-  //       <!doctype html>
-  //       <html>
-  //         <head>
-  //           <meta charset="utf-8">
-  //           <title>Abandoned Cart #${cartId}.pdf</title>
-  //           <style>
-  //             *{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111827;margin:0;background:#fff;padding:28px}
-  //             .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111827;padding-bottom:18px;margin-bottom:20px}
-  //             .brand{display:flex;align-items:center;gap:12px}
-  //             .logo{width:54px;height:54px;border-radius:14px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px}
-  //             .brand h1{margin:0;font-size:26px}
-  //             .meta{text-align:right}
-  //             .meta h2{margin:0 0 8px;font-size:20px}
-  //             .muted{color:#64748b;font-size:12px}
-  //             .summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px}
-  //             .box{border:1px solid #e5e7eb;border-radius:10px;padding:14px;min-height:96px}
-  //             .box-title{font-size:11px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:8px}
-  //             .box strong{display:block;margin-bottom:4px}
-  //             table{width:100%;border-collapse:collapse}
-  //             thead{background:#f8fafc}
-  //             th{font-size:11px;text-transform:uppercase;color:#64748b;text-align:left;padding:12px;border-bottom:1px solid #e5e7eb}
-  //             td{padding:12px;border-bottom:1px solid #e5e7eb;vertical-align:middle}
-  //             th:nth-child(n+2),td:nth-child(n+2){text-align:right}
-  //             .product{display:flex;align-items:center;gap:12px}
-  //             .product img,.image-fallback{width:58px;height:58px;border-radius:8px;border:1px solid #e5e7eb;object-fit:cover}
-  //             .image-fallback{display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:10px}
-  //             .product-title{font-weight:700}
-  //             .totals{width:320px;margin:20px 0 0 auto}
-  //             .line{display:flex;justify-content:space-between;padding:7px 0}
-  //             .grand{border-top:2px solid #111827;margin-top:8px;padding-top:12px;font-size:20px;font-weight:800}
-  //             .footer{margin-top:28px;text-align:center;color:#64748b;font-size:11px}
-  //             @media print{body{padding:0}.box,.product{break-inside:avoid}thead{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
-  //           </style>
-  //         </head>
-  //         <body>
-  //           <div class="header">
-  //             <div class="brand">
-  //               <div class="logo">SW</div>
-  //               <div>
-  //                 <h1>Sellwin</h1>
-  //                 <div class="muted">Abandoned cart summary</div>
-  //               </div>
-  //             </div>
-  //             <div class="meta">
-  //               <h2>Cart #${cart.id}</h2>
-  //               <div><strong>Date:</strong> ${new Date(cart.time).toLocaleString('en-IN')}</div>
-  //               <div><strong>Status:</strong> ${cart.contacted_status || 'Pending'}</div>
-  //             </div>
-  //           </div>
-
-  //           <div class="summary">
-  //             <div class="box">
-  //               <div class="box-title">Customer</div>
-  //               <strong>${name || 'Guest'}</strong>
-  //               <div>${cart.email || 'N/A'}</div>
-  //               <div>${cart.phone || 'N/A'}</div>
-  //             </div>
-  //             <div class="box">
-  //               <div class="box-title">Payment</div>
-  //               <strong>N/A</strong>
-  //               <div class="muted">Paid: N/A</div>
-  //             </div>
-  //             <div class="box">
-  //               <div class="box-title">Shipping</div>
-  //               <div>Same as billing</div>
-  //             </div>
-  //           </div>
-
-  //           <table>
-  //             <thead><tr><th>Title</th><th>SKU</th><th>Price</th><th>Qty</th><th>Total</th></tr></thead>
-  //             <tbody>${itemRows}</tbody>
-  //           </table>
-
-  //           <div class="totals">
-  //             <div class="line"><span>Subtotal</span><span>${this.utils.formatCurrency(cart.cart_total)}</span></div>
-  //             <div class="line"><span>Discount</span><span>-${this.utils.formatCurrency(0)}</span></div>
-  //             <div class="line"><span>Tax</span><span>${this.utils.formatCurrency(0)}</span></div>
-  //             <div class="line"><span>Shipping</span><span>${this.utils.formatCurrency(0)}</span></div>
-  //             <div class="line grand"><span>Total</span><span>${this.utils.formatCurrency(cart.cart_total)}</span></div>
-  //           </div>
-
-  //           <div class="footer">Generated by Sellwin on ${new Date().toLocaleString('en-IN')}</div>
-  //         </body>
-  //       </html>
-  //     `;
-
-  //     // Write to the new window and close document
-  //     win.document.open();
-  //     win.document.write(htmlContent);
-  //     win.document.close();
-
-  //     // Print functionality with fallback
-  //     const printPDF = () => {
-  //         try {
-  //             win.focus();
-  //             win.print();
-  //         } catch (e) {
-  //             console.error('Print error:', e);
-  //             alert('Please use your browser\'s print function (Ctrl+P or Cmd+P) to save as PDF');
-  //         }
-  //     };
-
-  //     // Trigger print after content loads
-  //     win.onload = () => setTimeout(printPDF, 500);
-
-  //     // Backup timeout
-  //     setTimeout(printPDF, 1000);
-  // }
-
-  async downloadPdf(cartId: number): Promise<void> {
-
-    const cart = this.carts().find(c => c.id === cartId);
-    if (!cart) return;
-
-    const name = ((cart.name || '') + ' ' + (cart.surname || '')).trim();
-    const items = cart.products || [];
-    console.log(items);
-    // Wait until every image is loaded
-    await Promise.all(
-      items
-        .filter(i => i.thumbnail)
-        .map(i => new Promise<void>((resolve) => {
-
-          const img = new Image();
-
-          img.crossOrigin = 'anonymous';
-
-          img.onload = () => resolve();
-
-          img.onerror = () => {
-            console.warn('Unable to load image:', i.thumbnail);
-            resolve();
-          };
-
-          img.src = i.thumbnail;
-
-        }))
-    );
-
-    const itemRows = items.map(item => `
-        <tr>
-            <td>
-                <div class="product">
-                    ${item.thumbnail
-        ? `<img src="${item.thumbnail}" alt="${item.title}" crossorigin="anonymous">`
-        : `<div class="image-fallback">No image</div>`
-      }
-
-                    <div>
-                        <div class="product-title">${item.title}</div>
-                        <div class="muted">Product ID: ${item.product_id}</div>
-                    </div>
-                </div>
-            </td>
-
-            <td>${item.sku || 'N/A'}</td>
-            <td>${this.utils.formatCurrency(item.price)}</td>
-            <td>${item.quantity}</td>
-            <td>${this.utils.formatCurrency(item.price * item.quantity)}</td>
-        </tr>
-    `).join('');
-
-    const html = `
-<!doctype html>
-<html>
-
-<head>
-
-<meta charset="utf-8">
-
-<title>Cart #${cart.id}</title>
-
-<style>
-
-*{
-box-sizing:border-box;
-font-family:Arial,sans-serif;
-}
-
-body{
-padding:30px;
-color:#111;
-}
-
-.header{
-display:flex;
-justify-content:space-between;
-margin-bottom:30px;
-border-bottom:2px solid #222;
-padding-bottom:15px;
-}
-
-.summary{
-display:grid;
-grid-template-columns:1fr 1fr 1fr;
-gap:20px;
-margin-bottom:25px;
-}
-
-.box{
-border:1px solid #ddd;
-padding:15px;
-border-radius:8px;
-}
-
-table{
-width:100%;
-border-collapse:collapse;
-}
-
-th,td{
-padding:12px;
-border-bottom:1px solid #ddd;
-}
-
-.product{
-display:flex;
-align-items:center;
-gap:12px;
-}
-
-.product img{
-width:60px;
-height:60px;
-object-fit:cover;
-border-radius:6px;
-border:1px solid #ddd;
-}
-
-.image-fallback{
-width:60px;
-height:60px;
-display:flex;
-align-items:center;
-justify-content:center;
-border:1px solid #ddd;
-font-size:10px;
-}
-
-.totals{
-width:320px;
-margin-left:auto;
-margin-top:20px;
-}
-
-.line{
-display:flex;
-justify-content:space-between;
-padding:6px 0;
-}
-
-.grand{
-font-size:20px;
-font-weight:bold;
-border-top:2px solid #000;
-padding-top:10px;
-}
-
-@media print{
-
-body{
-margin:0;
-padding:20px;
-}
-
-}
-
-</style>
-
-</head>
-
-<body>
-
-<div class="header">
-
-<div>
-
-<h1>Sellwin</h1>
-
-<div>Abandoned Cart Report</div>
-
-</div>
-
-<div>
-
-<h2>Cart #${cart.id}</h2>
-
-<div>${new Date(cart.time).toLocaleString('en-IN')}</div>
-
-</div>
-
-</div>
-
-<div class="summary">
-
-<div class="box">
-
-<b>Customer</b><br><br>
-
-${name || 'Guest'}<br>
-
-${cart.email || ''}<br>
-
-${cart.phone || ''}
-
-</div>
-
-<div class="box">
-
-<b>Status</b><br><br>
-
-${cart.contacted_status || 'Pending'}
-
-</div>
-
-<div class="box">
-
-<b>Total</b><br><br>
-
-${this.utils.formatCurrency(cart.cart_total)}
-
-</div>
-
-</div>
-
-<table>
-
-<thead>
-
-<tr>
-
-<th>Product</th>
-
-<th>SKU</th>
-
-<th>Price</th>
-
-<th>Qty</th>
-
-<th>Total</th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-${itemRows}
-
-</tbody>
-
-</table>
-
-<div class="totals">
-
-<div class="line">
-
-<span>Grand Total</span>
-
-<strong>${this.utils.formatCurrency(cart.cart_total)}</strong>
-
-</div>
-
-</div>
-
-<script>
-
-window.onload=function(){
-
-setTimeout(function(){
-
-window.print();
-
-},800);
-
-}
-
-</script>
-
-</body>
-
-</html>
-`;
-
-    const printWindow = window.open('', '_blank');
-
-    if (!printWindow) {
-      alert('Please allow popups.');
-      return;
-    }
-
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-
-  }
 
 
   deleteCart(cartId: number): void {
