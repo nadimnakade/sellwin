@@ -260,9 +260,9 @@ export class OrderDetailComponent implements OnInit {
     const darkColor: [number, number, number] = [30, 30, 30];
     const grayColor: [number, number, number] = [100, 100, 100];
 
-    // Columns: No(10) + Product(22) + Item(92) + Qty(14) + Amount(32) = 170
-    const colX = [20, 30, 52, 144, 158];
-    const colW = [10, 22, 92, 14, 32];
+    // Columns: No(10) + Product(22) + Item(88) + Qty(14) + Amount(36) = 170
+    const colX = [20, 30, 52, 140, 154];
+    const colW = [10, 22, 88, 14, 36];
 
     const formatDate = (dateStr: string): string => {
       if (!dateStr) return '-';

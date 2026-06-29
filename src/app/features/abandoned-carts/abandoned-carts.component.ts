@@ -125,8 +125,7 @@ interface CartBountyCart {
               <thead>
                 <tr class="border-b border-surface-200 dark:border-surface-700">
                   <th class="text-left px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Customer</th>
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Contact</th>
-                  th>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Contact</th>                  
                   <th class="text-right px-4 py-3 text-xs font-semibold text-surface-500 uppercase cursor-pointer hover:text-surface-700" (click)="toggleSort('cart_total')">
                     Cart Total {{ sortIcon('cart_total') }}
                   </th>
