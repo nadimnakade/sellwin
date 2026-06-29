@@ -234,7 +234,7 @@ export class OrderDetailComponent implements OnInit {
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (id) {
-      this.api.getOrder(id).subscribe({
+      this.api.getSellwinOrder(id).subscribe({
         next: (res) => {
           this.order.set(res);
           this.selectedStatus = res.status;
@@ -323,64 +323,6 @@ export class OrderDetailComponent implements OnInit {
 
       y += headerH;
     };
-
-    const loadImage = (url: string): Promise<string | null> =>
-    new Promise((resolve) => {
-
-      if (!url) {
-        resolve(null);
-        return;
-      }
-
-      const img = new Image();
-
-      img.crossOrigin = 'anonymous';
-
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-
-          const ctx = canvas.getContext('2d');
-
-          if (!ctx) {
-            resolve(null);
-            return;
-          }
-
-          ctx.drawImage(img, 0, 0);
-
-          resolve(canvas.toDataURL('image/jpeg', 0.95));
-
-        } catch (e) {
-          console.error('Canvas conversion failed', e);
-          resolve(null);
-        }
-      };
-
-      img.onerror = () => {
-        console.error('Image failed:', url);
-        resolve(null);
-      };
-
-      img.src = url;
-
-    });
-    // const loadImage = (url: string): Promise<string | null> =>
-    //   new Promise((resolve) => {
-    //     if (!url) return resolve(null);
-    //     fetch(url)
-    //       .then(res => res.ok ? res.blob() : null)
-    //       .then(blob => {
-    //         if (!blob) return resolve(null);
-    //         const reader = new FileReader();
-    //         reader.onloadend = () => resolve(reader.result as string);
-    //         reader.onerror = () => resolve(null);
-    //         reader.readAsDataURL(blob);
-    //       })
-    //       .catch(() => resolve(null));
-    //   });
 
     const drawRow = (item: OrderItem, index: number, imgDataUrl: string | null): number => {
       const rowH = 22;
@@ -479,19 +421,16 @@ export class OrderDetailComponent implements OnInit {
     drawHeader();
     drawTableHeader();
 
-    const loadAll = order.products.map(p => loadImage(p.image));
-    Promise.all(loadAll).then(images => {
-      images.forEach((img, i) => {
-        checkPage(24);
-        const rh = drawRow(order.products[i], i, img);
-        y += rh;
-      });
-
-      checkPage(18);
-      drawGrandTotal();
-
-      pdf.save(`Order-${order.orderNumber}.pdf`);
+    order.products.forEach((item, i) => {
+      checkPage(24);
+      const rh = drawRow(item, i, item.imageBase64);
+      y += rh;
     });
+
+    checkPage(18);
+    drawGrandTotal();
+
+    pdf.save(`Order-${order.orderNumber}.pdf`);
   }
 
   saveStatus(): void {

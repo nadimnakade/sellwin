@@ -87,6 +87,12 @@ export class ApiService {
     );
   }
 
+  getSellwinOrder(id: number): Observable<OrderDetail> {
+    return this.http.get<any>(`${environment.apiUrl}/order/${id}`, { params: this.auth() }).pipe(
+      map(mapSellwinOrderDetail),
+    );
+  }
+
   updateOrderStatus(id: number, status: string): Observable<OrderDetail> {
     return this.http.put<any>(`${this.wc}/orders/${id}`, { status }, { params: this.auth() }).pipe(
       map(mapWCOrderDetail),
@@ -276,6 +282,7 @@ function mapWCOrderDetail(o: any): OrderDetail {
     price: parseFloat(li.price || '0'),
     subtotal: parseFloat(li.subtotal || '0'),
     image: li.image?.src || '',
+    imageBase64: null,
   }));
 
   return {
@@ -331,4 +338,61 @@ function formatIndianMobile(mobile: string): string {
   if (digits.startsWith('91')) return `+${digits}`;
   if (digits.length === 10) return `+91${digits}`;
   return mobile.startsWith('+') ? mobile : `+${digits}`;
+}
+
+function mapSellwinOrderDetail(o: any): OrderDetail {
+  return {
+    id: o.id,
+    orderNumber: o.orderNumber || String(o.id),
+    status: o.status || 'pending',
+    currency: o.currency || 'INR',
+    dateCreated: o.dateCreated || '',
+    datePaid: o.datePaid || '',
+    paymentMethod: o.paymentMethod || '',
+    customer: {
+      name: o.customer?.name || 'Guest',
+      mobile: formatIndianMobile(o.customer?.mobile || ''),
+      email: o.customer?.email || '',
+    },
+    billing: {
+      firstName: o.billing?.firstName || '',
+      lastName: o.billing?.lastName || '',
+      mobile: formatIndianMobile(o.billing?.mobile || ''),
+      email: o.billing?.email || '',
+      address1: o.billing?.address1 || '',
+      address2: o.billing?.address2 || '',
+      city: o.billing?.city || '',
+      state: o.billing?.state || '',
+      postcode: o.billing?.postcode || '',
+      country: o.billing?.country || '',
+    },
+    shipping: {
+      firstName: o.shipping?.firstName || '',
+      lastName: o.shipping?.lastName || '',
+      mobile: formatIndianMobile(o.shipping?.mobile || ''),
+      email: '',
+      address1: o.shipping?.address1 || '',
+      address2: o.shipping?.address2 || '',
+      city: o.shipping?.city || '',
+      state: o.shipping?.state || '',
+      postcode: o.shipping?.postcode || '',
+      country: o.shipping?.country || '',
+    },
+    products: (o.products || []).map((p: any) => ({
+      productId: p.productId,
+      name: p.name,
+      sku: p.sku || '',
+      quantity: p.quantity,
+      price: parseFloat(p.price || '0'),
+      subtotal: parseFloat(p.subtotal || '0'),
+      image: p.image || '',
+      imageBase64: p.imageBase64 || null,
+    })),
+    subtotal: parseFloat(o.subtotal || '0'),
+    discountTotal: parseFloat(o.discountTotal || '0'),
+    taxTotal: parseFloat(o.taxTotal || '0'),
+    shippingTotal: parseFloat(o.shippingTotal || '0'),
+    total: parseFloat(o.total || '0'),
+    note: o.note || '',
+  };
 }

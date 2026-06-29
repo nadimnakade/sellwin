@@ -63,6 +63,7 @@ export interface OrderItem {
   price: number;
   subtotal: number;
   image: string;
+  imageBase64: string | null;
 }
 
 export interface ActiveCart {
