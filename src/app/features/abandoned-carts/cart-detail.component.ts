@@ -71,6 +71,7 @@ import { whatsappConfig } from '../../../environments/environment';
                         <option [value]="status.value">{{ status.label }}</option>
                       }
                     </select>
+                    
                     <button (click)="saveStatus()"
                             [disabled]="savingStatus() || selectedStatus === c.status"
                             class="btn-primary disabled:opacity-40">
@@ -193,12 +194,13 @@ export class CartDetailComponent implements OnInit {
   selectedStatus = '';
 
   statusOptions = [
-    { value: '', label: 'Select...' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'contacted', label: 'Contacted' },
-    { value: 'follow_up', label: 'Follow-up' },
-    { value: 'converted', label: 'Converted' },
-    { value: 'closed', label: 'Closed' },
+    { value: 'pending', label: 'Pending payment' },
+    { value: 'processing', label: 'Processing' },
+    { value: 'on-hold', label: 'On hold' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'cancelled', label: 'Cancelled' },
+    { value: 'refunded', label: 'Refunded' },
+    { value: 'failed', label: 'Failed' },
   ];
 
   ngOnInit(): void {
@@ -216,183 +218,210 @@ export class CartDetailComponent implements OnInit {
   }
 
   downloadPdf(): void {
-    const order = this.cart();
-    if (!order) return;
-
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageW = 210;
-    const margin = 20;
-    const contentW = pageW - margin * 2;
-    let y = margin;
-
-    const font = 'helvetica';
-    const darkColor: [number, number, number] = [30, 30, 30];
-    const grayColor: [number, number, number] = [100, 100, 100];
-
-    const colX = [20, 30, 52, 140, 154];
-    const colW = [10, 22, 88, 14, 36];
-
-    const formatDate = (dateStr: string): string => {
-      if (!dateStr) return '-';
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    };
-
-    const drawHeader = (): void => {
-      y = margin;
-      pdf.setFillColor(30, 30, 30);
-      pdf.roundedRect(margin, y, 14, 14, 3, 3, 'F');
-      pdf.setFont(font, 'bold');
-      pdf.setFontSize(11);
-      pdf.setTextColor(255, 255, 255);
-      pdf.text('SW', margin + 7, y + 8.5, { align: 'center' });
-      pdf.setFontSize(16);
-      pdf.setTextColor(...darkColor);
-      pdf.text('SELLWIN', margin + 18, y + 10);
-      y += 22;
-
-      pdf.setFont(font, 'normal');
-      pdf.setFontSize(9);
-      pdf.setTextColor(...grayColor);
-      pdf.text('Cart Number:', margin, y);
-      pdf.setTextColor(...darkColor);
-      pdf.setFont(font, 'bold');
-      pdf.text(String(order.orderNumber), margin + 24, y);
-
-      pdf.setFont(font, 'normal');
-      pdf.setTextColor(...grayColor);
-      pdf.text('Date:', margin + 80, y);
-      pdf.setTextColor(...darkColor);
-      pdf.setFont(font, 'bold');
-      pdf.text(formatDate(order.dateCreated), margin + 92, y);
-      y += 10;
-    };
-
-    const drawTableHeader = (): void => {
-      const headerH = 8;
-      pdf.setFillColor(30, 30, 30);
-      pdf.rect(margin, y, contentW, headerH, 'F');
-      pdf.setFont(font, 'bold');
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(7);
-      pdf.text('No.', colX[0] + 3, y + 5.5);
-      pdf.text('Product', colX[1] + 2, y + 5.5);
-      pdf.text('Item', colX[2] + 2, y + 5.5);
-      pdf.text('Qty', colX[3] + colW[3] / 2, y + 5.5, { align: 'center' });
-      pdf.text('Amount', colX[4] + colW[4] - 2, y + 5.5, { align: 'right' });
-      y += headerH;
-    };
-
-    const drawRow = (item: OrderItem, index: number, imgDataUrl: string | null): number => {
-      const rowH = 22;
-      const textY = y + 5;
-
-      if (index % 2 === 0) {
-        pdf.setFillColor(245, 245, 245);
-        pdf.rect(margin, y, contentW, rowH, 'F');
-      }
-
-      pdf.setDrawColor(220, 220, 220);
-      pdf.setLineWidth(0.2);
-      pdf.rect(margin, y, contentW, rowH, 'S');
-
-      [colX[1], colX[2], colX[3], colX[4]].forEach(cx => {
-        pdf.line(cx, y, cx, y + rowH);
-      });
-
-      pdf.setFont(font, 'normal');
-      pdf.setFontSize(8);
-      pdf.setTextColor(...darkColor);
-      pdf.text(String(index + 1), colX[0] + colW[0] / 2, y + rowH / 2 + 1, { align: 'center' });
-
-      if (imgDataUrl) {
-        try {
-          const format = imgDataUrl.startsWith('data:image/png') ? 'PNG' :
-                        imgDataUrl.startsWith('data:image/webp') ? 'WEBP' : 'JPEG';
-          pdf.addImage(imgDataUrl, format, colX[1] + 1, y + 1, 20, rowH - 2);
-          pdf.setDrawColor(200, 200, 200);
-          pdf.setLineWidth(0.2);
-          pdf.rect(colX[1] + 1, y + 1, 20, rowH - 2, 'S');
-        } catch { /* skip broken image */ }
-      }
-
-      pdf.setFont(font, 'bold');
-      pdf.setFontSize(7);
-      pdf.setTextColor(...darkColor);
-      const maxNameW = colW[2] - 4;
-      const nameLines = pdf.splitTextToSize(item.name, maxNameW);
-      pdf.text(nameLines[0] || item.name, colX[2] + 2, textY);
-
-      if (item.sku) {
-        pdf.setFont(font, 'normal');
-        pdf.setFontSize(6.5);
-        pdf.setTextColor(...grayColor);
-        const skuMax = pdf.splitTextToSize(item.sku, maxNameW);
-        pdf.text(skuMax[0] || item.sku, colX[2] + 2, textY + 5);
-      }
-
-      pdf.setFont(font, 'normal');
-      pdf.setFontSize(8);
-      pdf.setTextColor(...darkColor);
-      pdf.text(String(item.quantity), colX[3] + colW[3] / 2, y + rowH / 2 + 1, { align: 'center' });
-
-      pdf.setFontSize(7.5);
-      const amt = this.utils.formatCurrency(item.subtotal);
-      pdf.text(amt, colX[4] + colW[4] - 2, y + rowH / 2 + 1, { align: 'right' });
-
-      return rowH;
-    };
-
-    const drawGrandTotal = (): void => {
-      y += 1;
-      pdf.setDrawColor(30, 30, 30);
-      pdf.setLineWidth(0.5);
-      pdf.line(margin + 100, y, margin + contentW, y);
-      y += 7;
-      pdf.setFont(font, 'bold');
-      pdf.setFontSize(9);
-      pdf.setTextColor(...darkColor);
-      pdf.text('Grand Total', margin + 110, y);
-      pdf.text(this.utils.formatCurrency(order.total), margin + contentW - 2, y, { align: 'right' });
-    };
-
-    const checkPage = (needed: number): void => {
-      if (y + needed > 297 - margin) {
-        pdf.addPage();
+    
+      const order = this.cart();
+      debugger;
+      if (!order) return;
+  
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageW = 210;
+      const margin = 20;
+      const contentW = pageW - margin * 2;
+      let y = margin;
+  
+      const font = 'helvetica';
+      const darkColor: [number, number, number] = [30, 30, 30];
+      const grayColor: [number, number, number] = [100, 100, 100];
+  
+      // Columns: No(10) + Product(22) + Item(88) + Qty(14) + Amount(36) = 170
+      const colX = [20, 30, 52, 140, 154];
+      const colW = [10, 22, 88, 14, 36];
+  
+      const formatDate = (dateStr: string): string => {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      };
+  
+      const drawHeader = (): void => {
         y = margin;
-        drawTableHeader();
-      }
-    };
+  
+        pdf.setFillColor(30, 30, 30);
+        pdf.roundedRect(margin, y, 14, 14, 3, 3, 'F');
+        pdf.setFont(font, 'bold');
+        pdf.setFontSize(11);
+        pdf.setTextColor(255, 255, 255);
+        pdf.text('SW', margin + 7, y + 8.5, { align: 'center' });
+  
+        pdf.setFontSize(16);
+        pdf.setTextColor(...darkColor);
+        pdf.text('SELLWIN', margin + 18, y + 10);
+  
+        y += 22;
+  
+        pdf.setFont(font, 'normal');
+        pdf.setFontSize(9);
+        pdf.setTextColor(...grayColor);
+        pdf.text('Order Number:', margin, y);
+        pdf.setTextColor(...darkColor);
+        pdf.setFont(font, 'bold');
+        pdf.text(String(order.orderNumber), margin + 28, y);
+  
+        pdf.setFont(font, 'normal');
+        pdf.setTextColor(...grayColor);
+        pdf.text('Order Date:', margin + 80, y);
+        pdf.setTextColor(...darkColor);
+        pdf.setFont(font, 'bold');
+        pdf.text(formatDate(order.dateCreated), margin + 100, y);
+  
+        y += 10;
+      };
+  
+      const drawTableHeader = (): void => {
+        const headerH = 8;
+  
+        pdf.setFillColor(30, 30, 30);
+        pdf.rect(margin, y, contentW, headerH, 'F');
+  
+        pdf.setFont(font, 'bold');
+        pdf.setTextColor(255, 255, 255);
+  
+        // Header: No. | Product | Item | Qty | Amount
+        pdf.setFontSize(7);
+        pdf.text('No.', colX[0] + 3, y + 5.5);
+        pdf.text('Product', colX[1] + 2, y + 5.5);
+        pdf.text('Item', colX[2] + 2, y + 5.5);
+        pdf.text('Qty', colX[3] + colW[3] / 2, y + 5.5, { align: 'center' });
+        pdf.text('Amount', colX[4] + colW[4] - 2, y + 5.5, { align: 'right' });
+  
+        y += headerH;
+      };
+  
+      const drawRow = (item: OrderItem, index: number, imgDataUrl: string | null): number => {
+        const rowH = 22;
+        const textY = y + 5;
+  
+        if (index % 2 === 0) {
+          pdf.setFillColor(245, 245, 245);
+          pdf.rect(margin, y, contentW, rowH, 'F');
+        }
+  
+        pdf.setDrawColor(220, 220, 220);
+        pdf.setLineWidth(0.2);
+        pdf.rect(margin, y, contentW, rowH, 'S');
+  
+        // Column dividers
+        [colX[1], colX[2], colX[3], colX[4]].forEach(cx => {
+          pdf.line(cx, y, cx, y + rowH);
+        });
+  
+        // No.
+        pdf.setFont(font, 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(...darkColor);
+        pdf.text(String(index + 1), colX[0] + colW[0] / 2, y + rowH / 2 + 1, { align: 'center' });
+  
+        // Product image
+        if (imgDataUrl) {
+          try {
+  
+            const format = imgDataUrl.startsWith('data:image/png') ? 'PNG' :
+                          imgDataUrl.startsWith('data:image/webp') ? 'WEBP' : 'JPEG';
+  
+            pdf.addImage(imgDataUrl,format,colX[1] + 1,y + 1,20,rowH - 2);
+            //pdf.addImage(imgDataUrl, 'JPEG', colX[1] + 1, y + 1, 20, rowH - 2);
+            pdf.setDrawColor(200, 200, 200);
+            pdf.setLineWidth(0.2);
+            pdf.rect(colX[1] + 1, y + 1, 20, rowH - 2, 'S');
+          } catch {
+            // skip broken image
+          }
+        }
+  
+        // Item name
+        pdf.setFont(font, 'bold');
+        pdf.setFontSize(7);
+        pdf.setTextColor(...darkColor);
+        const maxNameW = colW[2] - 4;
+        const nameLines = pdf.splitTextToSize(item.name, maxNameW);
+        pdf.text(nameLines[0] || item.name, colX[2] + 2, textY);
+  
+        // SKU
+        if (item.sku) {
+          pdf.setFont(font, 'normal');
+          pdf.setFontSize(6.5);
+          pdf.setTextColor(...grayColor);
+          const skuMax = pdf.splitTextToSize(item.sku, maxNameW);
+          pdf.text(skuMax[0] || item.sku, colX[2] + 2, textY + 5);
+        }
+  
+        // Qty
+        pdf.setFont(font, 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(...darkColor);
+        pdf.text(String(item.quantity), colX[3] + colW[3] / 2, y + rowH / 2 + 1, { align: 'center' });
+  
+        // Amount
+        pdf.setFontSize(7.5);
+        const amt = this.utils.formatCurrency(item.subtotal);
+        pdf.text(amt, colX[4] + colW[4] - 2, y + rowH / 2 + 1, { align: 'right' });
+  
+        return rowH;
+      };
+  
+      const drawGrandTotal = (): void => {
+        y += 1;
+        pdf.setDrawColor(30, 30, 30);
+        pdf.setLineWidth(0.5);
+        pdf.line(margin + 100, y, margin + contentW, y);
+        y += 7;
+  
+        pdf.setFont(font, 'bold');
+        pdf.setFontSize(9);
+        pdf.setTextColor(...darkColor);
+        pdf.text('Grand Total', margin + 110, y);
+        pdf.text(this.utils.formatCurrency(order.total), margin + contentW - 2, y, { align: 'right' });
+      };
+  
+      const checkPage = (needed: number): void => {
+        if (y + needed > 297 - margin) {
+          pdf.addPage();
+          y = margin;
+          drawTableHeader();
+        }
+      };
+  
+      drawHeader();
+      drawTableHeader();
+  
+      order.products.forEach((item, i) => {
+        checkPage(24);
+        const rh = drawRow(item, i, item.imageBase64);
+        y += rh;
+      });
+  
+      checkPage(18);
+      drawGrandTotal();
+  
+      pdf.save(`Order-${order.orderNumber}.pdf`);
+    }  
 
-    drawHeader();
-    drawTableHeader();
-
-    order.products.forEach((item, i) => {
-      checkPage(24);
-      const rh = drawRow(item, i, item.imageBase64);
-      y += rh;
-    });
-
-    checkPage(18);
-    drawGrandTotal();
-
-    pdf.save(`Cart-${order.orderNumber}.pdf`);
-  }
-
+  
   saveStatus(): void {
     const current = this.cart();
-    if (!current) return;
+    if (!current || this.selectedStatus === current.status) return;
     this.savingStatus.set(true);
-    this.api.updateCartStatus(current.id, this.selectedStatus).subscribe({
-      next: () => {
-        this.cart.set({ ...current, status: this.selectedStatus });
+    this.api.updateOrderStatus(current.id, this.selectedStatus).subscribe({
+      next: (res) => {
+        this.cart.set(res);
+        this.selectedStatus = res.status;
         this.savingStatus.set(false);
-        this.toast.add({ severity: 'success', summary: 'Updated', detail: `Status set to ${this.selectedStatus || 'Pending'}`, life: 3000 });
+        this.toast.add({ severity: 'success', summary: 'Updated', detail: `Status set to ${this.utils.getStatusLabel(res.status)}`, life: 3000 });
       },
       error: (err) => {
         this.savingStatus.set(false);
-        this.toast.add({ severity: 'error', summary: 'Failed', detail: err?.error?.message || 'Could not update status', life: 5000 });
+        this.toast.add({ severity: 'error', summary: 'Failed', detail: err?.error?.message || 'Could not update order status', life: 5000 });
       },
-    });
+    });    
   }
 }

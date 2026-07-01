@@ -1,6 +1,6 @@
-import { Component, signal, inject } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
-import { NgClass, UpperCasePipe } from '@angular/common';
+import { Component, signal, computed, inject, OnInit } from '@angular/core';
+import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { UpperCasePipe } from '@angular/common';
 import { AuthService } from '../core/services/auth.service';
 
 interface NavItem {
@@ -12,23 +12,25 @@ interface NavItem {
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, NgClass, UpperCasePipe],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpperCasePipe],
   template: `
     <div class="flex h-screen overflow-hidden bg-surface-50 dark:bg-surface-950">
-      <!-- Sidebar Overlay -->
-      <div class="fixed inset-0 bg-black/40 z-20 transition-opacity duration-300"
+      <!-- Sidebar Overlay (mobile only) -->
+      <div class="fixed inset-0 bg-black/40 z-20 lg:hidden transition-opacity duration-300"
            [class.opacity-0]="!sidebarOpen()"
            [class.pointer-events-none]="!sidebarOpen()"
            [class.opacity-100]="sidebarOpen()"
            (click)="sidebarOpen.set(false)"></div>
 
       <!-- Sidebar -->
-      <aside [ngClass]="{
-        'translate-x-0': sidebarOpen(),
-        '-translate-x-full': !sidebarOpen()
-      }" class="fixed inset-y-0 left-0 z-30 w-64 transition-transform duration-300 ease-out flex flex-col bg-white dark:bg-surface-900 border-r border-surface-200 dark:border-surface-800">
+      <aside class="fixed lg:static inset-y-0 left-0 z-30 h-full transition-all duration-300 ease-out flex flex-col bg-white dark:bg-surface-900 border-r border-surface-200 dark:border-surface-800"
+             [style.width]="sidebarWidth()"
+             [style.border-right-width]="(!sidebarOpen() && !isMobile()) ? '0' : ''"
+             [style.overflow]="(!sidebarOpen() && !isMobile()) ? 'hidden' : ''"
+             [class.-translate-x-full]="!sidebarOpen() && isMobile()"
+             [class.translate-x-0]="sidebarOpen() && isMobile()">
         <!-- Logo -->
-        <div class="flex items-center gap-3 px-6 h-16 border-b border-surface-200 dark:border-surface-800">
+        <div class="flex items-center gap-3 px-6 h-16 border-b border-surface-200 dark:border-surface-800 min-w-[256px]">
           <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
             <span class="text-white font-bold text-sm">S</span>
           </div>
@@ -36,7 +38,7 @@ interface NavItem {
         </div>
 
         <!-- Navigation -->
-        <nav class="flex-1 overflow-y-auto p-4 space-y-1">
+        <nav class="flex-1 overflow-y-auto p-4 space-y-1 min-w-[256px]">
           @for (item of navItems; track item.route) {
             <a [routerLink]="item.route"
                routerLinkActive="bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 font-medium"
@@ -49,7 +51,7 @@ interface NavItem {
         </nav>
 
         <!-- Sidebar Footer -->
-        <div class="p-4 border-t border-surface-200 dark:border-surface-800">
+        <div class="p-4 border-t border-surface-200 dark:border-surface-800 min-w-[256px]">
           <button (click)="auth.logout()"
                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-surface-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 w-full transition-all">
             <i class="pi pi-sign-out text-lg"></i>
@@ -59,7 +61,7 @@ interface NavItem {
       </aside>
 
       <!-- Main Content -->
-      <div class="flex-1 flex flex-col overflow-hidden">
+      <div class="flex-1 flex flex-col overflow-hidden min-w-0">
         <!-- Top Header -->
         <header class="h-16 bg-white dark:bg-surface-900 border-b border-surface-200 dark:border-surface-800 flex items-center justify-between px-4 lg:px-6">
           <button (click)="sidebarOpen.set(!sidebarOpen())" class="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800">
@@ -100,22 +102,31 @@ interface NavItem {
     </div>
   `,
 })
-export class LayoutComponent {
+export class LayoutComponent implements OnInit {
   auth = inject(AuthService);
   sidebarOpen = signal(false);
+  isMobile = signal(true);
   currentTime = '';
+
+  sidebarWidth = computed(() => {
+    if (this.isMobile()) return '256px';
+    return this.sidebarOpen() ? '256px' : '0px';
+  });
 
   navItems: NavItem[] = [
     { label: 'Dashboard', icon: 'pi pi-home', route: '/dashboard' },
     { label: 'Orders', icon: 'pi pi-shopping-cart', route: '/orders' },
-    { label: 'Active Carts', icon: 'pi pi-clock', route: '/active-carts' },
     { label: 'Latest Cart Changes', icon: 'pi pi-exclamation-triangle', route: '/latest-carts' },
     { label: 'Customers', icon: 'pi pi-users', route: '/customers' },
     { label: 'Settings', icon: 'pi pi-cog', route: '/settings' },
   ];
 
-  constructor() {
+  ngOnInit(): void {
+    this.isMobile.set(window.innerWidth < 1024);
     this.sidebarOpen.set(window.innerWidth >= 1024);
+  }
+
+  constructor() {
     this.updateTime();
     setInterval(() => this.updateTime(), 60000);
   }

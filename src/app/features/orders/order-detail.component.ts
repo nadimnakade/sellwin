@@ -28,15 +28,7 @@ import { OrderDetail, OrderItem } from '../../core/interfaces';
           </div>
         </div>
         <div class="flex items-center gap-2">
-          @if (order()?.status; as status) {
-            <span [class]="utils.getStatusClass(status)">{{ utils.getStatusLabel(status) }}</span>
-          }
-          @if (order()) {
-            <button (click)="downloadPdf()" class="btn-ghost">
-              <i class="pi pi-file-pdf"></i>
-              Download PDF
-            </button>
-          }
+          
         </div>
         @if (order(); as o) {
           <div class="flex flex-wrap items-center gap-2">
@@ -118,8 +110,8 @@ import { OrderDetail, OrderItem } from '../../core/interfaces';
               <table class="w-full">
                 <thead>
                   <tr class="border-b border-surface-200 dark:border-surface-700">
-                    <th class="text-left px-5 py-3 text-xs font-semibold text-surface-500 uppercase">Title</th>
-                    <th class="text-left px-4 py-3 text-xs font-semibold text-surface-500 uppercase">SKU</th>
+                    <th></th>
+                    <th class="text-left px-5 py-3 text-xs font-semibold text-surface-500 uppercase">Title</th>                    
                     <th class="text-right px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Price</th>
                     <th class="text-center px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Qty</th>
                     <th class="text-right px-5 py-3 text-xs font-semibold text-surface-500 uppercase">Total</th>
@@ -128,22 +120,22 @@ import { OrderDetail, OrderItem } from '../../core/interfaces';
                 <tbody>
                   @for (item of o.products; track item.productId) {
                     <tr class="border-b border-surface-100 dark:border-surface-800">
-                      <td class="px-5 py-4">
-                        <div class="flex items-center gap-3">
-                          <div class="w-14 h-14 rounded-lg bg-surface-100 dark:bg-surface-800 overflow-hidden flex items-center justify-center border border-surface-200 dark:border-surface-700">
+                    <td class="px-5 py-4"> 
+                    <div class="w-14 h-14 rounded-lg bg-surface-100 dark:bg-surface-800 overflow-hidden flex items-center justify-center border border-surface-200 dark:border-surface-700">
                             @if (item.image) {
                               <img [src]="item.image" [alt]="item.name" class="w-full h-full object-cover">
                             } @else {
                               <i class="pi pi-box text-surface-400"></i>
                             }
                           </div>
+                    </td>
+                      <td class="px-5 py-4">
+                        <div class="flex items-center gap-3">                          
                           <div>
-                            <p class="text-sm font-semibold text-surface-900 dark:text-white">{{ item.name }}</p>
-                            <p class="text-xs text-surface-400">Product ID: {{ item.productId }}</p>
+                            <p class="text-sm font-semibold text-surface-900 dark:text-white">{{ item.name }}</p>                            
                           </div>
                         </div>
-                      </td>
-                      <td class="px-4 py-4 text-sm text-surface-500">{{ item.sku || 'N/A' }}</td>
+                      </td>                      
                       <td class="px-4 py-4 text-sm text-right text-surface-700 dark:text-surface-300">{{ utils.formatCurrency(item.price) }}</td>
                       <td class="px-4 py-4 text-sm text-center font-semibold text-surface-900 dark:text-white">{{ item.quantity }}</td>
                       <td class="px-5 py-4 text-sm text-right font-bold text-surface-900 dark:text-white">{{ utils.formatCurrency(item.subtotal) }}</td>
@@ -247,6 +239,7 @@ export class OrderDetailComponent implements OnInit {
 
   downloadPdf(): void {
     const order = this.order();
+    debugger;
     console.log(order);
     if (!order) return;
 
@@ -287,7 +280,7 @@ export class OrderDetailComponent implements OnInit {
       y += 22;
 
       pdf.setFont(font, 'normal');
-      pdf.setFontSize(9);
+      pdf.setFontSize(10);
       pdf.setTextColor(...grayColor);
       pdf.text('Order Number:', margin, y);
       pdf.setTextColor(...darkColor);
@@ -314,7 +307,7 @@ export class OrderDetailComponent implements OnInit {
       pdf.setTextColor(255, 255, 255);
 
       // Header: No. | Product | Item | Qty | Amount
-      pdf.setFontSize(7);
+      pdf.setFontSize(10);
       pdf.text('No.', colX[0] + 3, y + 5.5);
       pdf.text('Product', colX[1] + 2, y + 5.5);
       pdf.text('Item', colX[2] + 2, y + 5.5);
@@ -344,7 +337,7 @@ export class OrderDetailComponent implements OnInit {
 
       // No.
       pdf.setFont(font, 'normal');
-      pdf.setFontSize(8);
+      pdf.setFontSize(10);
       pdf.setTextColor(...darkColor);
       pdf.text(String(index + 1), colX[0] + colW[0] / 2, y + rowH / 2 + 1, { align: 'center' });
 
@@ -374,25 +367,25 @@ export class OrderDetailComponent implements OnInit {
       pdf.text(nameLines[0] || item.name, colX[2] + 2, textY);
 
       // SKU
-      if (item.sku) {
-        pdf.setFont(font, 'normal');
-        pdf.setFontSize(6.5);
-        pdf.setTextColor(...grayColor);
-        const skuMax = pdf.splitTextToSize(item.sku, maxNameW);
-        pdf.text(skuMax[0] || item.sku, colX[2] + 2, textY + 5);
-      }
+      // if (item.sku) {
+      //   pdf.setFont(font, 'normal');
+      //   pdf.setFontSize(6.5);
+      //   pdf.setTextColor(...grayColor);
+      //   const skuMax = pdf.splitTextToSize(item.sku, maxNameW);
+      //   pdf.text(skuMax[0] || item.sku, colX[2] + 2, textY + 5);
+      // }
 
       // Qty
       pdf.setFont(font, 'normal');
-      pdf.setFontSize(8);
+      pdf.setFontSize(10);
       pdf.setTextColor(...darkColor);
       pdf.text(String(item.quantity), colX[3] + colW[3] / 2, y + rowH / 2 + 1, { align: 'center' });
 
       // Amount
-      pdf.setFontSize(7.5);
+      pdf.setFontSize(10);
       const amt = this.utils.formatCurrency(item.subtotal);
-      pdf.text(amt, colX[4] + colW[4] - 2, y + rowH / 2 + 1, { align: 'right' });
-
+      //pdf.text(amt, colX[4] + colW[4] - 2, y + rowH / 2 + 1, { align: 'center' });
+      pdf.text(amt, colX[4] + colW[4] - 8, y + rowH / 2 + 1, { align: 'right'  });
       return rowH;
     };
 
