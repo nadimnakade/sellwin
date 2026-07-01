@@ -99,6 +99,10 @@ export class ApiService {
     );
   }
 
+  convertCartToOrder(cartId: number): Observable<{ order_id: number; orderNumber: string }> {
+    return this.http.post<any>(`${environment.apiUrl}/cart/${cartId}/convert`, {}, { params: this.auth() });
+  }
+
   updateOrderStatus(id: number, status: string): Observable<OrderDetail> {
     return this.http.put<any>(`${this.wc}/orders/${id}`, { status }, { params: this.auth() }).pipe(
       map(mapWCOrderDetail),

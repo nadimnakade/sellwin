@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
@@ -30,6 +30,9 @@ import { whatsappConfig } from '../../../environments/environment';
         </div>
         <div class="flex items-center gap-2">
           @if (cart(); as c) {
+            <button (click)="convertToOrder()" [disabled]="converting()" class="btn-primary">
+              <i class="pi pi-shopping-bag"></i> {{ converting() ? 'Converting...' : 'Convert to Order' }}
+            </button>
             <button (click)="downloadPdf()" class="btn-ghost">
               <i class="pi pi-file-pdf"></i> Download PDF
             </button>
@@ -183,6 +186,7 @@ import { whatsappConfig } from '../../../environments/environment';
 export class CartDetailComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private toast = inject(MessageService);
   utils = inject(UtilsService);
 
@@ -190,17 +194,17 @@ export class CartDetailComponent implements OnInit {
 
   loading = signal(true);
   savingStatus = signal(false);
+  converting = signal(false);
   cart = signal<OrderDetail | null>(null);
   selectedStatus = '';
 
   statusOptions = [
-    { value: 'pending', label: 'Pending payment' },
-    { value: 'processing', label: 'Processing' },
-    { value: 'on-hold', label: 'On hold' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'cancelled', label: 'Cancelled' },
-    { value: 'refunded', label: 'Refunded' },
-    { value: 'failed', label: 'Failed' },
+    { value: '', label: 'Select...' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'contacted', label: 'Contacted' },
+    { value: 'follow_up', label: 'Follow-up' },
+    { value: 'converted', label: 'Converted' },
+    { value: 'closed', label: 'Closed' },
   ];
 
   ngOnInit(): void {
@@ -218,10 +222,8 @@ export class CartDetailComponent implements OnInit {
   }
 
   downloadPdf(): void {
-    
-      const order = this.cart();
-      debugger;
-      if (!order) return;
+    const order = this.cart();
+    if (!order) return;
   
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageW = 210;
@@ -411,17 +413,39 @@ export class CartDetailComponent implements OnInit {
     const current = this.cart();
     if (!current || this.selectedStatus === current.status) return;
     this.savingStatus.set(true);
-    this.api.updateOrderStatus(current.id, this.selectedStatus).subscribe({
-      next: (res) => {
-        this.cart.set(res);
-        this.selectedStatus = res.status;
+    this.api.updateCartStatus(current.id, this.selectedStatus).subscribe({
+      next: () => {
+        this.cart.set({ ...current, status: this.selectedStatus });
         this.savingStatus.set(false);
-        this.toast.add({ severity: 'success', summary: 'Updated', detail: `Status set to ${this.utils.getStatusLabel(res.status)}`, life: 3000 });
+        this.toast.add({ severity: 'success', summary: 'Updated', detail: `Status set to ${this.selectedStatus || 'Pending'}`, life: 3000 });
       },
       error: (err) => {
         this.savingStatus.set(false);
-        this.toast.add({ severity: 'error', summary: 'Failed', detail: err?.error?.message || 'Could not update order status', life: 5000 });
+        this.toast.add({ severity: 'error', summary: 'Failed', detail: err?.error?.message || 'Could not update status', life: 5000 });
       },
-    });    
+    });
+  }
+
+  convertToOrder(): void {
+    const current = this.cart();
+    if (!current || this.converting()) return;
+    if (!confirm('Create a WooCommerce order from this cart?')) return;
+
+    this.converting.set(true);
+    this.api.convertCartToOrder(current.id).subscribe({
+      next: (res) => {
+        this.converting.set(false);
+        this.toast.add({ severity: 'success', summary: 'Order Created', detail: `Order #${res.orderNumber} created`, life: 3000 });
+        this.downloadPdf();
+        if (current.customer.mobile) {
+          const msg = `Hi ${current.customer.name}, your Sellwin order #${res.orderNumber} has been created! Total: ${this.utils.formatCurrency(current.total)}. We will contact you shortly.`;
+          this.utils.openWhatsApp(current.customer.mobile, msg);
+        }
+      },
+      error: (err) => {
+        this.converting.set(false);
+        this.toast.add({ severity: 'error', summary: 'Failed', detail: err?.error?.message || 'Could not convert cart to order', life: 5000 });
+      },
+    });
   }
 }

@@ -274,7 +274,7 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
   currentPage = signal(1);
   totalPages = signal(1);
   perPage = 20;
-  activeFilter = signal('all');
+  activeFilter = signal('today');
   activeStatusFilter = signal('');
   sortColumn = signal('time');
   sortDirection = signal<'asc' | 'desc'>('desc');
