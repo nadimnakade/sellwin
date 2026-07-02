@@ -58,7 +58,7 @@ interface CartBountyCart {
       
 
       <!-- Stats Bar -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" style="display:none">
         <div class="glass-card p-4 text-center">
           <div class="text-2xl font-bold text-surface-900 dark:text-white">{{ stats().total }}</div>
           <div class="text-xs text-surface-500 mt-1">Total Carts</div>
@@ -274,7 +274,7 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
   currentPage = signal(1);
   totalPages = signal(1);
   perPage = 20;
-  activeFilter = signal('');
+  activeFilter = signal('year');
   activeStatusFilter = signal('');
   sortColumn = signal('time');
   sortDirection = signal<'asc' | 'desc'>('desc');
@@ -290,7 +290,7 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
     { key: 'week', label: 'This Week' },
     { key: 'month', label: 'This Month' },
     { key: 'year', label: 'This Year' },
-    { key: 'all', label: 'All Time' },
+    // { key: 'year', label: 'All Time' },
   ];
 
   statusFilters = [
@@ -336,6 +336,7 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
 
   loadCarts(): void {
     this.loading.set(true);
+    
     const timeRange = this.activeFilter() === 'all' || !this.activeFilter() ? '' : this.activeFilter();
     this.api.getCartBountyCarts({
       page: this.currentPage(),
