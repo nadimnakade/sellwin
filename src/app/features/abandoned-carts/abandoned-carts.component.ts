@@ -274,7 +274,7 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
   currentPage = signal(1);
   totalPages = signal(1);
   perPage = 20;
-  activeFilter = signal('today');
+  activeFilter = signal('');
   activeStatusFilter = signal('');
   sortColumn = signal('time');
   sortDirection = signal<'asc' | 'desc'>('desc');
@@ -302,8 +302,10 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
   ];
 
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
+  private knownCartIds = new Set<number>();
 
   ngOnInit(): void {
+    this.requestNotificationPermission();
     this.loadCarts();
     this.loadStats();
     this.refreshTimer = setInterval(() => {
@@ -312,13 +314,29 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
     }, 60000);
   }
 
+  private requestNotificationPermission(): void {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+
+  private notifyNewCart(cart: CartBountyCart): void {
+    const name = [cart.name, cart.surname].filter(Boolean).join(' ') || 'Guest';
+    const title = 'New Cart Alert';
+    const body = `${name} added ${cart.products?.length || 0} item(s) — ${this.utils.formatCurrency(cart.cart_total)}`;
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, { body, icon: 'assets/logo.png', tag: `cart-${cart.id}` } as any);
+    }
+  }
+
   ngOnDestroy(): void {
     if (this.refreshTimer) clearInterval(this.refreshTimer);
   }
 
   loadCarts(): void {
     this.loading.set(true);
-    const timeRange = this.activeFilter() === 'all' ? '' : this.activeFilter();
+    const timeRange = this.activeFilter() === 'all' || !this.activeFilter() ? '' : this.activeFilter();
     this.api.getCartBountyCarts({
       page: this.currentPage(),
       perPage: this.perPage,
@@ -326,11 +344,23 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
       search: this.searchTerm || undefined,
       orderby: this.sortColumn(),
       order: this.sortDirection(),
-      idleMinutes: 1,
+      idleMinutes: 0,
       timeRange: timeRange || undefined,
     }).subscribe({
       next: (res) => {
-        this.carts.set(res.carts || []);
+        const newCarts = res.carts || [];
+        const isFirstLoad = this.knownCartIds.size === 0;
+
+        if (!isFirstLoad) {
+          newCarts.forEach((cart: CartBountyCart) => {
+            if (!this.knownCartIds.has(cart.id)) {
+              this.notifyNewCart(cart);
+            }
+          });
+        }
+
+        newCarts.forEach((cart: CartBountyCart) => this.knownCartIds.add(cart.id));
+        this.carts.set(newCarts);
         this.totalCarts.set(res.total || 0);
         this.totalPages.set(res.totalPages || res.total_pages || 1);
         this.updatePageNumbers();
