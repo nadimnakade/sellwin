@@ -9,6 +9,8 @@ import { ApiService } from '../../core/services/api.service';
 import { UtilsService } from '../../core/services/utils.service';
 import { OrderDetail, OrderItem } from '../../core/interfaces';
 import { whatsappConfig, environment } from '../../../environments/environment';
+import { CartSharedService } from './cart-shared.service';
+import { CartBountyCart } from './abandoned-carts.component';
 
 @Component({
   selector: 'app-cart-detail',
@@ -188,6 +190,7 @@ export class CartDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private toast = inject(MessageService);
+  private cartShared = inject(CartSharedService);
   utils = inject(UtilsService);
 
   whatsappMsg = whatsappConfig.followUpMessage;
@@ -209,16 +212,82 @@ export class CartDetailComponent implements OnInit {
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    if (id) {
-      this.api.getCartDetail(id).subscribe({
-        next: (res) => {
-          this.cart.set(res);
-          this.selectedStatus = res.status;
-          this.loading.set(false);
-        },
-        error: () => this.loading.set(false),
-      });
+    if (!id) return;
+
+    // First, try to get cart from shared service (has prices from list)
+    const sharedCart = this.cartShared.getCart();
+    if (sharedCart?.id == id) {      
+      this.cart.set(this.mapSharedCartToOrderDetail(sharedCart));
+      this.selectedStatus = sharedCart.contacted_status || '';
+      this.loading.set(false);
     }
+
+    // Then fetch full detail from API (has imageBase64 for PDF)
+    // this.api.getCartDetail(id).subscribe({
+    //   next: (res) => {
+    //     this.cart.set(res);
+    //     this.selectedStatus = res.status;
+    //   },
+    //   error: () => {},
+    //   complete: () => this.loading.set(false),
+    // });
+  }
+
+  private mapSharedCartToOrderDetail(cart: CartBountyCart): OrderDetail {
+    return {
+      id: cart.id,
+      orderNumber: 'C' + cart.id,
+      status: cart.contacted_status || 'pending',
+      currency: cart.currency,
+      dateCreated: cart.time,
+      datePaid: '',
+      paymentMethod: '',
+      customer: {
+        name: (cart.name + ' ' + cart.surname).trim() || 'Guest',
+        mobile: cart.phone || '',
+        email: cart.email || '',
+      },
+      billing: {
+        firstName: cart.name || '',
+        lastName: cart.surname || '',
+        mobile: cart.phone || '',
+        email: cart.email || '',
+        address1: '',
+        address2: '',
+        city: '',
+        state: '',
+        postcode: '',
+        country: '',
+      },
+      shipping: {
+        firstName: '',
+        lastName: '',
+        mobile: '',
+        email: '',
+        address1: '',
+        address2: '',
+        city: '',
+        state: '',
+        postcode: '',
+        country: '',
+      },
+      products: cart.products.map(p => ({
+        productId: p.product_id,
+        name: p.title,
+        sku: p.sku,
+        quantity: p.quantity,
+        price: p.price,
+        subtotal: p.subtotal || p.price * p.quantity,
+        image: p.thumbnail,
+        imageBase64: p.imageBase64,
+      })),
+      subtotal: cart.cart_total,
+      discountTotal: 0,
+      taxTotal: 0,
+      shippingTotal: 0,
+      total: cart.cart_total,
+      note: '',
+    };
   }
 
   downloadPdf(): void {
@@ -412,12 +481,16 @@ export class CartDetailComponent implements OnInit {
         this.converting.set(false);
         this.toast.add({ severity: 'success', summary: 'Order Created', detail: `Order #${res.orderNumber} created`, life: 3000 });
         this.downloadPdf();
-        if (current.customer.mobile) {
-          const invoiceUrl = `${environment.siteUrl}/wp-json/sellwin/v1/order/${res.order_id}/invoice`;
-          const msg = `Hi ${current.customer.name}, your Sellwin order #${res.orderNumber} has been created! Total: ${this.utils.formatCurrency(current.total)}. View invoice: ${invoiceUrl}`;
-          this.utils.openWhatsApp(current.customer.mobile, msg);
-        }
-        this.router.navigate(['/latest-carts']);
+        // if (current.customer.mobile) {
+        //   const invoiceUrl = `${environment.siteUrl}/wp-json/sellwin/v1/order/${res.order_id}/invoice`;
+        //   const msg = `Hi ${current.customer.name}, your Sellwin order #${res.orderNumber} has been created! Total: ${this.utils.formatCurrency(current.total)}. View invoice: ${invoiceUrl}`;
+        //   this.utils.openWhatsApp(current.customer.mobile, msg);
+        // }
+        setTimeout(() => {
+          this.cartShared.clearCart();
+          this.router.navigate(['/latest-carts']);
+        }, 5000)
+        
       },
       error: (err) => {
         this.converting.set(false);

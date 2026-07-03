@@ -1,14 +1,15 @@
 import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
-import { NgClass, TitleCasePipe } from '@angular/common';
+import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import jsPDF from 'jspdf';
 import { ApiService } from '../../core/services/api.service';
 import { UtilsService } from '../../core/services/utils.service';
 import { whatsappConfig, environment } from '../../../environments/environment';
+import { CartSharedService } from './cart-shared.service';
 import { OrderDetail, OrderItem } from '../../core/interfaces';
 
-interface CartBountyCart {
+export interface CartBountyCart {
   id: number;
   name: string;
   surname: string;
@@ -20,8 +21,10 @@ interface CartBountyCart {
     title: string;
     quantity: number;
     price: number;
+    subtotal: number;
     thumbnail: string;
     sku: string;
+    imageBase64: string | null;
   }>;
   cart_total: number;
   currency: string;
@@ -36,7 +39,7 @@ interface CartBountyCart {
 @Component({
   selector: 'app-abandoned-carts',
   standalone: true,
-  imports: [NgClass, FormsModule, TitleCasePipe, RouterLink],
+  imports: [NgClass, FormsModule],
   template: `
     <div class="page-container">
       <div class="page-header">
@@ -190,11 +193,11 @@ interface CartBountyCart {
                     <!-- Actions -->
                     <td class="px-4 py-3 text-right">
                       <div class="flex items-center justify-end gap-1">
-                        <a [routerLink]="['/latest-carts', cart.id]"
-                           class="p-1.5 rounded-md text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-700 transition"
-                           title="View">
+                        <button (click)="viewCart(cart)"
+                                class="p-1.5 rounded-md text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-700 transition"
+                                title="View">
                           <i class="pi pi-eye"></i>
-                        </a>
+                        </button>
                         <button (click)="cart.phone && utils.openWhatsApp(cart.phone, whatsappMsg)"
                                 [disabled]="!cart.phone"
                                 class="p-1.5 rounded-md text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition disabled:opacity-30 disabled:cursor-not-allowed"
@@ -263,6 +266,8 @@ interface CartBountyCart {
 })
 export class AbandonedCartsComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
+  private cartShared = inject(CartSharedService);
+  private router = inject(Router);
   utils = inject(UtilsService);
 
   Math = Math;
@@ -294,15 +299,20 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
   ];
 
   statusFilters = [
-    { key: '', label: 'All Statuses' },
-    { key: 'recoverable', label: 'Recoverable' },
-    { key: 'recovered', label: 'Recovered' },
-    { key: 'contacted', label: 'Contacted' },
-    { key: 'new', label: 'New' },
+    { key: '', label: 'All' },
+    { key: 'unconfirmed', label: 'Unconfirmed' },
+    { key: 'confirmed', label: 'Confirmed (Processing)' },
+    { key: 'rejected', label: 'Rejected' },
+    { key: 'accepted', label: 'Accepted (Processing)' },
   ];
 
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
   private knownCartIds = new Set<number>();
+
+viewCart(cart: CartBountyCart): void {
+    this.cartShared.setCart(cart);
+    this.router.navigate(['/latest-carts', cart.id]);
+  }
 
   ngOnInit(): void {
     this.requestNotificationPermission();
@@ -380,6 +390,10 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
 
   setTimeFilter(key: string): void {
     this.activeFilter.set(key);
+    // Reset status filter when "All Time" is selected to show truly everything
+    if (key === 'all' || key === '') {
+      this.activeStatusFilter.set('');
+    }
     this.currentPage.set(1);
     this.loadCarts();
   }
