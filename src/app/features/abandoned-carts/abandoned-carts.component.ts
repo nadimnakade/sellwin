@@ -447,7 +447,9 @@ viewCart(cart: CartBountyCart): void {
   }
 
   getTimeAgo(time: string): string {
-    const timestamp = new Date(time.replace(' ', 'T')).getTime();
+    // CartBounty stores time in UTC (current_time('mysql', true))
+    // Append 'Z' so JS treats it as UTC, not local time
+    const timestamp = new Date(time.replace(' ', 'T') + 'Z').getTime();
     if (!timestamp) return '';
     const minutes = Math.max(1, Math.floor((Date.now() - timestamp) / 60000));
     if (minutes < 60) return `${minutes} min ago`;
