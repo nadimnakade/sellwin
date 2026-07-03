@@ -390,10 +390,6 @@ viewCart(cart: CartBountyCart): void {
 
   setTimeFilter(key: string): void {
     this.activeFilter.set(key);
-    // Reset status filter when "All Time" is selected to show truly everything
-    if (key === 'all' || key === '') {
-      this.activeStatusFilter.set('');
-    }
     this.currentPage.set(1);
     this.loadCarts();
   }
