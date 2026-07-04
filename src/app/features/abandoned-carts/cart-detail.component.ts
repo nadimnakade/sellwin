@@ -12,18 +12,18 @@ import { whatsappConfig, environment } from '../../../environments/environment';
 import { CartSharedService } from './cart-shared.service';
 import { CartBountyCart } from './abandoned-carts.component';
 import html2canvas from 'html2canvas';
-import { NotoSansRegularBase64 } from '../../../assets/fonts/NotoSans-Regular-normal';
-import { NotoSansBoldBase64 } from '../../../assets/fonts/NotoSans-Bold';
+// import { NotoSansRegularBase64 } from '../../../assets/fonts/NotoSans-Regular-normal';
+// import { NotoSansBoldBase64 } from '../../../assets/fonts/NotoSans-Bold';
 
 // Register the fonts on the jsPDF API (so that every instance has them)
 // @ts-ignore
-(jsPDF as any).API.addFileToVFS('NotoSans-Regular.ttf', NotoSansRegularBase64);
-// @ts-ignore
-(jsPDF as any).API.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal');
-// @ts-ignore
-(jsPDF as any).API.addFileToVFS('NotoSans-Bold.ttf', NotoSansBoldBase64);
-// @ts-ignore
-(jsPDF as any).API.addFont('NotoSans-Bold.ttf', 'NotoSans', 'bold');
+// (jsPDF as any).API.addFileToVFS('NotoSans-Regular.ttf', NotoSansRegularBase64);
+// // @ts-ignore
+// (jsPDF as any).API.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal');
+// // @ts-ignore
+// (jsPDF as any).API.addFileToVFS('NotoSans-Bold.ttf', NotoSansBoldBase64);
+// // @ts-ignore
+// (jsPDF as any).API.addFont('NotoSans-Bold.ttf', 'NotoSans', 'bold');
 
 @Component({
   selector: 'app-cart-detail',
@@ -414,7 +414,7 @@ export class CartDetailComponent implements OnInit {
       // pdf.text(item.sku || 'N/A', colX[1] + 2, y + rowH / 2 + 1);
       
       // Price (unit) — uses font with ₹ glyph
-      pdf.setFont('NotoSans', 'normal');
+      pdf.setFont('Aerial', 'normal');
       pdf.setFontSize(7.5);
       pdf.setTextColor(90, 90, 90);
       const unitPrice = item.price;
@@ -427,7 +427,7 @@ export class CartDetailComponent implements OnInit {
       pdf.text(String(item.quantity), colX[3] + colW[3] / 2, y + rowH / 2 + 1, { align: 'center' });
 
       // Total
-      pdf.setFont('NotoSans', 'bold');
+      pdf.setFont('Aerial', 'bold');
       pdf.setFontSize(8);
       pdf.setTextColor(...dark);
       pdf.text(this.utils.formatCurrency(item.price * item.quantity), colX[4] + colW[4] - 4, y + rowH / 2 + 1, { align: 'center' });
@@ -454,7 +454,7 @@ export class CartDetailComponent implements OnInit {
       pdf.setFontSize(11);
       pdf.setTextColor(...dark);
       pdf.text('Total', margin + contentW - 70, y);
-      pdf.setFont('NotoSans', 'bold');
+      pdf.setFont('Aerial', 'bold');
       pdf.text(this.utils.formatCurrency(order.total), margin + contentW - 2, y, { align: 'right' });
     };
 
