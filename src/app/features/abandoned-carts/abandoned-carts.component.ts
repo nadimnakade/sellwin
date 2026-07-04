@@ -637,6 +637,21 @@ viewCart(cart: CartBountyCart): void {
     });
   }
 
+  async resizeImageToDataUrl(url: string, targetW = 240, targetH = 240): Promise<string> {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.src = url;
+  await new Promise(res => img.onload = res);
+  const canvas = document.createElement('canvas');
+  canvas.width = targetW;
+  canvas.height = targetH;
+  const ctx = canvas.getContext('2d')!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, targetW, targetH);
+  return canvas.toDataURL('image/jpeg', 0.92);
+}
+
   downloadPdf(cartId: any): void {
     this.api.getCartDetail(cartId).subscribe({
       next: (order) => {
@@ -644,7 +659,8 @@ viewCart(cart: CartBountyCart): void {
         console.log(order);
         if (!order) return;
 
-        const pdf = new jsPDF('p', 'mm', 'a4');
+        //const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdf = new jsPDF('p', 'mm', 'a4', true); // true = compress, doesn't hurt img res
         const pageW = 210;
         const margin = 20;
         const contentW = pageW - margin * 2;
