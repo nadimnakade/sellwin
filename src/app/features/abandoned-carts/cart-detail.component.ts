@@ -452,12 +452,12 @@ export class CartDetailComponent implements OnInit {
       pdf.text(nameLines.slice(0, 2), margin + 22, y + 7);
 
       // Product ID
-      if (item.productId) {
-        pdf.setFont(font, 'normal');
-        pdf.setFontSize(7);
-        pdf.setTextColor(...gray);
-        pdf.text(`ID: ${item.productId}`, margin + 22, y + 17);
-      }
+      // if (item.productId) {
+      //   pdf.setFont(font, 'normal');
+      //   pdf.setFontSize(7);
+      //   pdf.setTextColor(...gray);
+      //   pdf.text(`ID: ${item.productId}`, margin + 22, y + 17);
+      // }
 
       // SKU
       // pdf.setFont(font, 'normal');
