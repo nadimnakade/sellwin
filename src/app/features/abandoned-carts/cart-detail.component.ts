@@ -519,7 +519,7 @@ export class CartDetailComponent implements OnInit {
       next: (res) => {
         this.converting.set(false);
         this.toast.add({ severity: 'success', summary: 'Order Created', detail: `Order #${res.orderNumber} created`, life: 3000 });
-        this.downloadPdf();
+        //this.downloadPdf();
         // if (current.customer.mobile) {
         //   const invoiceUrl = `${environment.siteUrl}/wp-json/sellwin/v1/order/${res.order_id}/invoice`;
         //   const msg = `Hi ${current.customer.name}, your Sellwin order #${res.orderNumber} has been created! Total: ${this.utils.formatCurrency(current.total)}. View invoice: ${invoiceUrl}`;
