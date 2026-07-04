@@ -377,7 +377,7 @@ export class CartDetailComponent implements OnInit {
 
       pdf.setFont(font, 'normal');
       pdf.setFontSize(9);
-      pdf.setTextColor(...gray);
+      pdf.setTextColor(...dark);
 
       if (order.customer?.name) {
         pdf.setTextColor(...dark);
@@ -411,7 +411,7 @@ export class CartDetailComponent implements OnInit {
 
       // Column headers
       pdf.text('PRODUCT', margin + 3, y + 6);
-      pdf.text('SKU', margin + 95, y + 6);
+      // pdf.text('SKU', margin + 95, y + 6);
       pdf.text('PRICE', margin + 120, y + 6, { align: 'right' });
       pdf.text('QTY', margin + 145, y + 6, { align: 'center' });
       pdf.text('TOTAL', contentW + margin - 3, y + 6, { align: 'right' });
@@ -460,10 +460,10 @@ export class CartDetailComponent implements OnInit {
       }
 
       // SKU
-      pdf.setFont(font, 'normal');
-      pdf.setFontSize(8);
-      pdf.setTextColor(...gray);
-      pdf.text(item.sku || '-', margin + 95, y + 12);
+      // pdf.setFont(font, 'normal');
+      // pdf.setFontSize(8);
+      // pdf.setTextColor(...gray);
+      // pdf.text(item.sku || '-', margin + 95, y + 12);
 
       // Price
       pdf.setFont(font, 'normal');
