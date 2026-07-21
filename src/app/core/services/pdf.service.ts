@@ -188,7 +188,7 @@ export class PdfService {
       pdf.text(nameLines.slice(0, 2), margin + 22, y + 7);
 
       // Price (unit)
-      pdf.setFont(this.font, 'normal');
+      pdf.setFont(this.font, 'bold');
       pdf.setFontSize(8);
       pdf.setTextColor(...this.gray);
       pdf.text(formatPrice(item.price), margin + 120, y + 12, { align: 'right' });
