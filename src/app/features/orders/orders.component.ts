@@ -1,14 +1,18 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DatePipe, NgClass } from '@angular/common';
+import { MessageService } from 'primeng/api';
+import { ToastModule } from 'primeng/toast';
 import { ApiService } from '../../core/services/api.service';
 import { UtilsService } from '../../core/services/utils.service';
+import { PdfService, PdfConfig } from '../../core/services/pdf.service';
 import { Order } from '../../core/interfaces';
 
 @Component({
   selector: 'app-orders',
   standalone: true,
-  imports: [RouterLink, DatePipe, NgClass],
+  imports: [RouterLink, DatePipe, NgClass, ToastModule],
+  providers: [MessageService],
   template: `
     <div class="page-container">
       <div class="page-header">
@@ -98,8 +102,15 @@ import { Order } from '../../core/interfaces';
                         <a [routerLink]="['/orders', order.id]" class="btn-ghost p-1.5" title="View">
                           <i class="pi pi-eye"></i>
                         </a>                        
-                        <button (click)="utils.openWhatsApp(order.mobile)" class="btn-ghost p-1.5 text-green-600 hover:text-green-700" title="WhatsApp">
-                          <i class="pi pi-whatsapp"></i>
+                        <button (click)="sendWhatsAppWithPdf(order)"
+                                [disabled]="!order.mobile || sendingPdfId() === order.id"
+                                class="btn-ghost p-1.5 text-green-600 hover:text-green-700"
+                                [title]="order.mobile ? 'WhatsApp' : 'Phone number missing'">
+                          @if (sendingPdfId() === order.id) {
+                            <i class="pi pi-spin pi-spinner"></i>
+                          } @else {
+                            <i class="pi pi-whatsapp"></i>
+                          }
                         </button>
                       </div>
                     </td>
@@ -138,9 +149,12 @@ import { Order } from '../../core/interfaces';
 })
 export class OrdersComponent implements OnInit {
   private api = inject(ApiService);
+  private pdfService = inject(PdfService);
+  private toast = inject(MessageService);
   utils = inject(UtilsService);
 
   loading = signal(true);
+  sendingPdfId = signal<number | null>(null);
   orders = signal<Order[]>([]);
   totalOrders = signal(0);
   currentPage = signal(1);
@@ -204,6 +218,103 @@ export class OrdersComponent implements OnInit {
 
   downloadPdf(orderId: number): void {
     this.api.getOrder(orderId).subscribe((order) => this.utils.downloadOrderPdf(order));
+  }
+
+  async sendWhatsAppWithPdf(order: Order): Promise<void> {
+    if (!order.mobile || this.sendingPdfId() === order.id) return;
+    this.sendingPdfId.set(order.id);
+
+    // Fetch full detail with products
+    this.api.getSellwinOrder(order.id).subscribe({
+      next: async (detail) => {
+        const formatPrice = (price: number): string => {
+          return `Rs ${price.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+        };
+
+        const formatDate = (dateStr: string): string => {
+          if (!dateStr) return '-';
+          const d = new Date(dateStr);
+          return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
+            ', ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        };
+
+        const successColor: [number, number, number] = [34, 197, 94];
+
+        const orderInfo: { label: string; value: string; color?: [number, number, number] }[] = [
+          { label: 'Status', value: this.utils.getStatusLabel(detail.status), color: successColor },
+        ];
+        if (detail.paymentMethod) {
+          orderInfo.push({ label: 'Payment', value: detail.paymentMethod });
+        }
+        if (detail.datePaid) {
+          orderInfo.push({ label: 'Paid', value: formatDate(detail.datePaid) });
+        }
+
+        const summaryLines: { label: string; value: string; color?: [number, number, number] }[] = [];
+        if (detail.subtotal !== detail.total) {
+          summaryLines.push({ label: 'Subtotal:', value: formatPrice(detail.subtotal) });
+        }
+        if (detail.discountTotal > 0) {
+          summaryLines.push({ label: 'Discount:', value: `-${formatPrice(detail.discountTotal)}`, color: successColor });
+        }
+        if (detail.taxTotal > 0) {
+          summaryLines.push({ label: 'Tax:', value: formatPrice(detail.taxTotal) });
+        }
+        if (detail.shippingTotal > 0) {
+          summaryLines.push({ label: 'Shipping:', value: formatPrice(detail.shippingTotal) });
+        }
+
+        const config: PdfConfig = {
+          title: 'ORDER INVOICE',
+          orderNumber: detail.orderNumber,
+          dateCreated: detail.dateCreated,
+          total: detail.total,
+          customer: detail.customer,
+          products: detail.products,
+          orderInfo,
+          summaryLines,
+          filename: `Order-Invoice-${detail.orderNumber}.pdf`,
+        };
+
+        const blob = this.pdfService.generateBlob(config);
+        const filename = `Order-Invoice-${detail.orderNumber}.pdf`;
+        const file = new File([blob], filename, { type: 'application/pdf' });
+
+        if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              text: `Hello ${detail.customer.name}, here is your Sellwin order #${detail.orderNumber} invoice.`,
+            });
+            this.sendingPdfId.set(null);
+            return;
+          } catch (e) {
+            if (e instanceof DOMException && e.name === 'AbortError') {
+              this.sendingPdfId.set(null);
+              return;
+            }
+          }
+        }
+
+        this.api.uploadPdf(blob, filename).subscribe({
+          next: (res) => {
+            this.sendingPdfId.set(null);
+            const msg = `Hello ${detail.customer.name}, your Sellwin order #${detail.orderNumber} invoice is ready: ${res.url}`;
+            this.utils.openWhatsApp(detail.customer.mobile, msg);
+          },
+          error: () => {
+            this.sendingPdfId.set(null);
+            this.utils.openWhatsApp(order.mobile);
+            this.toast.add({ severity: 'warn', summary: 'PDF upload failed', detail: 'Sent text message instead', life: 5000 });
+          },
+        });
+      },
+      error: () => {
+        this.sendingPdfId.set(null);
+        this.utils.openWhatsApp(order.mobile);
+        this.toast.add({ severity: 'warn', summary: 'Could not fetch order details', detail: 'Sent text message instead', life: 5000 });
+      },
+    });
   }
 
   private updatePageNumbers(): void {

@@ -8,6 +8,7 @@ import { PdfService } from '../../core/services/pdf.service';
 import { whatsappConfig, environment } from '../../../environments/environment';
 import { CartSharedService } from './cart-shared.service';
 import { OrderDetail, OrderItem } from '../../core/interfaces';
+import { PdfConfig } from '../../core/services/pdf.service';
 
 export interface CartBountyCart {
   id: number;
@@ -198,11 +199,15 @@ export interface CartBountyCart {
                                 title="View">
                           <i class="pi pi-eye"></i>
                         </button>
-                        <button (click)="cart.phone && utils.openWhatsApp(cart.phone, whatsappMsg)"
-                                [disabled]="!cart.phone"
+                        <button (click)="sendWhatsAppWithPdf(cart)"
+                                [disabled]="!cart.phone || sendingPdfId() === cart.id"
                                 class="p-1.5 rounded-md text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition disabled:opacity-30 disabled:cursor-not-allowed"
                                 [title]="cart.phone ? 'WhatsApp' : 'Phone number missing'">
-                          <i class="pi pi-whatsapp"></i>
+                          @if (sendingPdfId() === cart.id) {
+                            <i class="pi pi-spin pi-spinner"></i>
+                          } @else {
+                            <i class="pi pi-whatsapp"></i>
+                          }
                         </button>
                         @if (cart.phone) {
                           <a [href]="'tel:' + cart.phone"
@@ -275,6 +280,7 @@ export class AbandonedCartsComponent implements OnInit, OnDestroy {
   whatsappMsg = whatsappConfig.followUpMessage;
 
   loading = signal(true);
+  sendingPdfId = signal<number | null>(null);
   carts = signal<CartBountyCart[]>([]);
   totalCarts = signal(0);
   currentPage = signal(1);
@@ -462,6 +468,65 @@ viewCart(cart: CartBountyCart): void {
 
   trackWhatsApp(cartId: number): void {
     this.api.markWhatsAppContacted(cartId).subscribe();
+  }
+
+  async sendWhatsAppWithPdf(cart: CartBountyCart): Promise<void> {
+    if (!cart.phone || this.sendingPdfId() === cart.id) return;
+    this.sendingPdfId.set(cart.id);
+
+    const config: PdfConfig = {
+      title: 'CART INVOICE',
+      orderNumber: `C${cart.id}`,
+      dateCreated: cart.time,
+      total: cart.cart_total,
+      customer: { name: this.getFullName(cart), mobile: cart.phone, email: cart.email },
+      products: cart.products.map(p => ({
+        productId: p.product_id,
+        name: p.title,
+        sku: p.sku || '',
+        quantity: p.quantity,
+        price: p.price,
+        subtotal: p.subtotal || p.price * p.quantity,
+        image: p.thumbnail,
+        imageBase64: p.imageBase64,
+      })),
+      filename: `Cart-Invoice-C${cart.id}.pdf`,
+    };
+
+    const blob = this.pdfService.generateBlob(config);
+    const filename = `Cart-Invoice-C${cart.id}.pdf`;
+    const file = new File([blob], filename, { type: 'application/pdf' });
+
+    if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          text: `Hi ${this.getFullName(cart)}, here is your Sellwin cart invoice.`,
+        });
+        this.sendingPdfId.set(null);
+        this.trackWhatsApp(cart.id);
+        return;
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') {
+          this.sendingPdfId.set(null);
+          return;
+        }
+      }
+    }
+
+    this.api.uploadPdf(blob, filename).subscribe({
+      next: (res) => {
+        this.sendingPdfId.set(null);
+        const msg = `Hi ${this.getFullName(cart)}, your Sellwin cart invoice is ready: ${res.url}`;
+        this.utils.openWhatsApp(cart.phone, msg);
+        this.trackWhatsApp(cart.id);
+      },
+      error: () => {
+        this.sendingPdfId.set(null);
+        const msg = this.whatsappMsg;
+        this.utils.openWhatsApp(cart.phone, msg);
+      },
+    });
   }
 
   updateStatus(cartId: number, event: Event): void {

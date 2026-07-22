@@ -1,13 +1,17 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { NgClass } from '@angular/common';
+import { MessageService } from 'primeng/api';
+import { ToastModule } from 'primeng/toast';
 import { ApiService } from '../../core/services/api.service';
 import { UtilsService } from '../../core/services/utils.service';
+import { PdfService, PdfConfig } from '../../core/services/pdf.service';
 import { ActiveCart } from '../../core/interfaces';
 
 @Component({
   selector: 'app-active-carts',
   standalone: true,
-  imports: [NgClass],
+  imports: [NgClass, ToastModule],
+  providers: [MessageService],
   template: `
     <div class="page-container">
       <div class="page-header">
@@ -61,9 +65,15 @@ import { ActiveCart } from '../../core/interfaces';
                     <td class="px-4 py-3 text-sm text-right text-surface-500">{{ cart.lastActivityAgo }}</td>
                     <td class="px-4 py-3 text-right">
                       <div class="flex items-center justify-end gap-2">
-                        <button (click)="utils.openWhatsApp(cart.mobile)"
-                                class="btn-ghost p-1.5 text-green-600 hover:text-green-700" title="WhatsApp">
-                          <i class="pi pi-whatsapp"></i>
+                        <button (click)="sendWhatsAppWithPdf(cart)"
+                                [disabled]="!cart.mobile || sendingPdfId() === cart.id"
+                                class="btn-ghost p-1.5 text-green-600 hover:text-green-700"
+                                [title]="cart.mobile ? 'WhatsApp' : 'Phone number missing'">
+                          @if (sendingPdfId() === cart.id) {
+                            <i class="pi pi-spin pi-spinner"></i>
+                          } @else {
+                            <i class="pi pi-whatsapp"></i>
+                          }
                         </button>
                       </div>
                     </td>
@@ -83,9 +93,12 @@ import { ActiveCart } from '../../core/interfaces';
 })
 export class ActiveCartsComponent implements OnInit {
   private api = inject(ApiService);
+  private pdfService = inject(PdfService);
+  private toast = inject(MessageService);
   utils = inject(UtilsService);
 
   loading = signal(true);
+  sendingPdfId = signal<number | null>(null);
   carts = signal<ActiveCart[]>([]);
 
   ngOnInit(): void {
@@ -113,5 +126,64 @@ export class ActiveCartsComponent implements OnInit {
       'Last Activity': c.lastActivity,
     }));
     this.utils.exportToCsv(data, `active-carts-${new Date().toISOString().slice(0, 10)}`);
+  }
+
+  async sendWhatsAppWithPdf(cart: ActiveCart): Promise<void> {
+    if (!cart.mobile || this.sendingPdfId() === cart.id) return;
+    this.sendingPdfId.set(cart.id);
+
+    const products = (cart.cartData || []).map((p: any) => ({
+      productId: p.product_id || 0,
+      name: p.product_name || 'Product',
+      sku: '',
+      quantity: p.quantity || 0,
+      price: p.price || 0,
+      subtotal: p.subtotal || (p.price || 0) * (p.quantity || 0),
+      image: '',
+      imageBase64: null as string | null,
+    }));
+
+    const config: PdfConfig = {
+      title: 'CART INVOICE',
+      orderNumber: `A${cart.id}`,
+      dateCreated: cart.lastActivity,
+      total: cart.cartValue,
+      customer: { name: cart.name || 'Guest', mobile: cart.mobile, email: '' },
+      products,
+      filename: `Cart-Invoice-A${cart.id}.pdf`,
+    };
+
+    const blob = this.pdfService.generateBlob(config);
+    const filename = `Cart-Invoice-A${cart.id}.pdf`;
+    const file = new File([blob], filename, { type: 'application/pdf' });
+
+    if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          text: `Hi ${cart.name || 'there'}, here is your Sellwin cart invoice.`,
+        });
+        this.sendingPdfId.set(null);
+        return;
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') {
+          this.sendingPdfId.set(null);
+          return;
+        }
+      }
+    }
+
+    this.api.uploadPdf(blob, filename).subscribe({
+      next: (res) => {
+        this.sendingPdfId.set(null);
+        const msg = `Hi ${cart.name || 'there'}, your Sellwin cart invoice is ready: ${res.url}`;
+        this.utils.openWhatsApp(cart.mobile, msg);
+      },
+      error: () => {
+        this.sendingPdfId.set(null);
+        this.utils.openWhatsApp(cart.mobile);
+        this.toast.add({ severity: 'warn', summary: 'PDF upload failed', detail: 'Sent text message instead', life: 5000 });
+      },
+    });
   }
 }

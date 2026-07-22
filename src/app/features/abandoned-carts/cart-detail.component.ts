@@ -336,7 +336,7 @@ export class CartDetailComponent implements OnInit {
     return `${environment.siteUrl}/wp-json/sellwin/v1/cart/${id}/invoice`;
   }
 
-  sendWhatsAppWithInvoice(): void {
+  async sendWhatsAppWithInvoice(): Promise<void> {
     const c = this.cart();
     if (!c?.customer.mobile) return;
     this.sendingPdf.set(true);
@@ -353,7 +353,27 @@ export class CartDetailComponent implements OnInit {
 
     const blob = this.pdfService.generateBlob(config);
     const filename = `Cart-Invoice-${c.orderNumber}.pdf`;
+    const file = new File([blob], filename, { type: 'application/pdf' });
 
+    // Try native share with file (mobile → WhatsApp receives PDF as attachment)
+    if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          text: `Hi ${c.customer.name}, here is your Sellwin cart invoice.`,
+        });
+        this.sendingPdf.set(false);
+        this.api.markWhatsAppContacted(c.id).subscribe();
+        return;
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') {
+          this.sendingPdf.set(false);
+          return;
+        }
+      }
+    }
+
+    // Fallback: upload PDF and send link
     this.api.uploadPdf(blob, filename).subscribe({
       next: (res) => {
         this.sendingPdf.set(false);

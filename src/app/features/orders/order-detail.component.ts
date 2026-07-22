@@ -320,7 +320,7 @@ export class OrderDetailComponent implements OnInit {
 
 
 
-  sendWhatsAppWithPdf(order: OrderDetail): void {
+  async sendWhatsAppWithPdf(order: OrderDetail): Promise<void> {
     if (this.sendingPdf()) return;
     this.sendingPdf.set(true);
 
@@ -375,7 +375,26 @@ export class OrderDetailComponent implements OnInit {
 
     const blob = this.pdfService.generateBlob(config);
     const filename = `Order-Invoice-${order.orderNumber}.pdf`;
+    const file = new File([blob], filename, { type: 'application/pdf' });
 
+    // Try native share with file (mobile → WhatsApp receives PDF as attachment)
+    if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          text: `Hello ${order.customer.name}, here is your Sellwin order #${order.orderNumber} invoice.`,
+        });
+        this.sendingPdf.set(false);
+        return;
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') {
+          this.sendingPdf.set(false);
+          return;
+        }
+      }
+    }
+
+    // Fallback: upload PDF and send link
     this.api.uploadPdf(blob, filename).subscribe({
       next: (res) => {
         this.sendingPdf.set(false);
