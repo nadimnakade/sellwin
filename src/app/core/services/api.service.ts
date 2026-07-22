@@ -248,6 +248,12 @@ export class ApiService {
 
   // ─── PRODUCTS ────────────────────────────────────────
 
+  uploadPdf(blob: Blob, filename: string): Observable<{ url: string; filename: string }> {
+    const formData = new FormData();
+    formData.append('file', blob, filename);
+    return this.http.post<any>(`${environment.apiUrl}/pdf/upload`, formData, { params: this.auth() });
+  }
+
   getTopProducts(limit: number = 10): Observable<TopProduct[]> {
     return this.http.get<any[]>(`${this.wc}/reports/top_sellers`, {
       params: this.auth().set('period', 'year'),

@@ -6,7 +6,7 @@ import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { ApiService } from '../../core/services/api.service';
 import { UtilsService } from '../../core/services/utils.service';
-import { PdfService } from '../../core/services/pdf.service';
+import { PdfService, PdfConfig } from '../../core/services/pdf.service';
 import { OrderDetail, OrderItem } from '../../core/interfaces';
 
 @Component({
@@ -35,10 +35,15 @@ import { OrderDetail, OrderItem } from '../../core/interfaces';
             <button (click)="downloadPdf()" class="btn-ghost">
               <i class="pi pi-file-pdf"></i> Download PDF
             </button>
-            <button (click)="utils.openWhatsApp(o.customer.mobile, getWhatsAppMessage(o))"
-                    [disabled]="!o.customer.mobile"
+            <button (click)="sendWhatsAppWithPdf(o)"
+                    [disabled]="!o.customer.mobile || sendingPdf()"
                     class="btn-ghost text-green-600 disabled:opacity-40">
-              <i class="pi pi-whatsapp"></i> WhatsApp
+              @if (sendingPdf()) {
+                <i class="pi pi-spin pi-spinner"></i>
+              } @else {
+                <i class="pi pi-whatsapp"></i>
+              }
+              {{ sendingPdf() ? 'Sending...' : 'WhatsApp' }}
             </button>
           </div>
         }
@@ -211,6 +216,7 @@ export class OrderDetailComponent implements OnInit {
 
   loading = signal(true);
   savingStatus = signal(false);
+  sendingPdf = signal(false);
   order = signal<OrderDetail | null>(null);
   selectedStatus = '';
 
@@ -314,8 +320,75 @@ export class OrderDetailComponent implements OnInit {
 
 
 
-  getWhatsAppMessage(order: OrderDetail): string {
-    return `Hello ${order.customer.name}, sharing details for your Sellwin order #${order.orderNumber}. Total: ${this.utils.formatCurrency(order.total)}.`;
+  sendWhatsAppWithPdf(order: OrderDetail): void {
+    if (this.sendingPdf()) return;
+    this.sendingPdf.set(true);
+
+    const formatPrice = (price: number): string => {
+      return `Rs ${price.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    };
+
+    const formatDate = (dateStr: string): string => {
+      if (!dateStr) return '-';
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
+        ', ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    };
+
+    const successColor: [number, number, number] = [34, 197, 94];
+
+    const orderInfo: { label: string; value: string; color?: [number, number, number] }[] = [
+      { label: 'Status', value: this.utils.getStatusLabel(order.status), color: successColor },
+    ];
+    if (order.paymentMethod) {
+      orderInfo.push({ label: 'Payment', value: order.paymentMethod });
+    }
+    if (order.datePaid) {
+      orderInfo.push({ label: 'Paid', value: formatDate(order.datePaid) });
+    }
+
+    const summaryLines: { label: string; value: string; color?: [number, number, number] }[] = [];
+    if (order.subtotal !== order.total) {
+      summaryLines.push({ label: 'Subtotal:', value: formatPrice(order.subtotal) });
+    }
+    if (order.discountTotal > 0) {
+      summaryLines.push({ label: 'Discount:', value: `-${formatPrice(order.discountTotal)}`, color: successColor });
+    }
+    if (order.taxTotal > 0) {
+      summaryLines.push({ label: 'Tax:', value: formatPrice(order.taxTotal) });
+    }
+    if (order.shippingTotal > 0) {
+      summaryLines.push({ label: 'Shipping:', value: formatPrice(order.shippingTotal) });
+    }
+
+    const config: PdfConfig = {
+      title: 'ORDER INVOICE',
+      orderNumber: order.orderNumber,
+      dateCreated: order.dateCreated,
+      total: order.total,
+      customer: order.customer,
+      products: order.products,
+      orderInfo,
+      summaryLines,
+      filename: `Order-Invoice-${order.orderNumber}.pdf`,
+    };
+
+    const blob = this.pdfService.generateBlob(config);
+    const filename = `Order-Invoice-${order.orderNumber}.pdf`;
+
+    this.api.uploadPdf(blob, filename).subscribe({
+      next: (res) => {
+        this.sendingPdf.set(false);
+        const msg = `Hello ${order.customer.name}, your Sellwin order #${order.orderNumber} invoice is ready: ${res.url}`;
+        this.utils.openWhatsApp(order.customer.mobile, msg);
+      },
+      error: () => {
+        this.sendingPdf.set(false);
+        const msg = `Hello ${order.customer.name}, sharing details for your Sellwin order #${order.orderNumber}. Total: ${this.utils.formatCurrency(order.total)}.`;
+        this.utils.openWhatsApp(order.customer.mobile, msg);
+        this.toast.add({ severity: 'warn', summary: 'PDF upload failed', detail: 'Sent text message instead', life: 5000 });
+      },
+    });
   }
 
   formatAddress(address: any): string {

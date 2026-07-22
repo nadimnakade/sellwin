@@ -26,7 +26,7 @@ export class PdfService {
   private readonly primaryColor: [number, number, number] = [37, 99, 235];
   private readonly successColor: [number, number, number] = [34, 197, 94];
 
-  generate(config: PdfConfig): void {
+  private buildPdf(config: PdfConfig): jsPDF {
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageW = 210;
     const margin = 15;
@@ -289,6 +289,16 @@ export class PdfService {
     drawSummary();
     drawFooter();
 
+    return pdf;
+  }
+
+  generate(config: PdfConfig): void {
+    const pdf = this.buildPdf(config);
     pdf.save(config.filename);
+  }
+
+  generateBlob(config: PdfConfig): Blob {
+    const pdf = this.buildPdf(config);
+    return pdf.output('blob');
   }
 }

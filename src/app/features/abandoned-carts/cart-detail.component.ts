@@ -6,7 +6,7 @@ import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { ApiService } from '../../core/services/api.service';
 import { UtilsService } from '../../core/services/utils.service';
-import { PdfService } from '../../core/services/pdf.service';
+import { PdfService, PdfConfig } from '../../core/services/pdf.service';
 import { OrderDetail, OrderItem } from '../../core/interfaces';
 import { whatsappConfig, environment } from '../../../environments/environment';
 import { CartSharedService } from './cart-shared.service';
@@ -38,11 +38,16 @@ import { CartBountyCart } from './abandoned-carts.component';
             <button (click)="downloadPdf()" class="btn-ghost">
               <i class="pi pi-file-pdf"></i> Download PDF
             </button>
-       <button (click)="sendWhatsAppWithInvoice()"
-                     [disabled]="!c.customer.mobile"
-                     class="btn-ghost text-green-600 disabled:opacity-40">
-               <i class="pi pi-whatsapp"></i> WhatsApp
-             </button>
+        <button (click)="sendWhatsAppWithInvoice()"
+                      [disabled]="!c.customer.mobile || sendingPdf()"
+                      class="btn-ghost text-green-600 disabled:opacity-40">
+                @if (sendingPdf()) {
+                  <i class="pi pi-spin pi-spinner"></i>
+                } @else {
+                  <i class="pi pi-whatsapp"></i>
+                }
+                {{ sendingPdf() ? 'Sending...' : 'WhatsApp' }}
+              </button>
           }
         </div>
       </div>
@@ -197,6 +202,7 @@ export class CartDetailComponent implements OnInit {
   loading = signal(true);
   savingStatus = signal(false);
   converting = signal(false);
+  sendingPdf = signal(false);
   cart = signal<OrderDetail | null>(null);
   selectedStatus = '';
 
@@ -333,9 +339,36 @@ export class CartDetailComponent implements OnInit {
   sendWhatsAppWithInvoice(): void {
     const c = this.cart();
     if (!c?.customer.mobile) return;
-    const invoiceUrl = this.getInvoiceUrl();
-    const msg = `Hi ${c.customer.name || 'there'}, view your Sellwin cart invoice here: ${invoiceUrl}`;
-    this.utils.openWhatsApp(c.customer.mobile, msg);
+    this.sendingPdf.set(true);
+
+    const config: PdfConfig = {
+      title: 'CART INVOICE',
+      orderNumber: c.orderNumber,
+      dateCreated: c.dateCreated,
+      total: c.total,
+      customer: c.customer,
+      products: c.products,
+      filename: `Cart-Invoice-${c.orderNumber}.pdf`,
+    };
+
+    const blob = this.pdfService.generateBlob(config);
+    const filename = `Cart-Invoice-${c.orderNumber}.pdf`;
+
+    this.api.uploadPdf(blob, filename).subscribe({
+      next: (res) => {
+        this.sendingPdf.set(false);
+        const msg = `Hi ${c.customer.name}, your Sellwin cart invoice is ready: ${res.url}`;
+        this.utils.openWhatsApp(c.customer.mobile, msg);
+        this.api.markWhatsAppContacted(c.id).subscribe();
+      },
+      error: () => {
+        this.sendingPdf.set(false);
+        const invoiceUrl = this.getInvoiceUrl();
+        const msg = `Hi ${c.customer.name}, view your Sellwin cart invoice here: ${invoiceUrl}`;
+        this.utils.openWhatsApp(c.customer.mobile, msg);
+        this.toast.add({ severity: 'warn', summary: 'PDF upload failed', detail: 'Sent invoice link instead', life: 5000 });
+      },
+    });
   }
 
   convertToOrder(): void {
