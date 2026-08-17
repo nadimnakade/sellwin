@@ -75,7 +75,7 @@ export class PdfService {
       pdf.setFontSize(10);
       pdf.setTextColor(...this.gray);
       pdf.text(`#${config.orderNumber}`, pageW - margin, y + 13, { align: 'right' });
-      pdf.setFontSize(8);
+      pdf.setFontSize(9);
       pdf.text(formatDate(config.dateCreated), pageW - margin, y + 18, { align: 'right' });
 
       y += 27;
@@ -145,7 +145,7 @@ export class PdfService {
       pdf.rect(margin, y, contentW, 9, 'F');
 
       pdf.setFont(this.font, 'bold');
-      pdf.setFontSize(8);
+      pdf.setFontSize(9);
       pdf.setTextColor(255, 255, 255);
 
       pdf.text('PRODUCT', margin + 3, y + 6);
@@ -182,14 +182,14 @@ export class PdfService {
 
       // Product name
       pdf.setFont(this.font, 'bold');
-      pdf.setFontSize(8);
+      pdf.setFontSize(9);
       pdf.setTextColor(...this.dark);
       const nameLines = pdf.splitTextToSize(item.name, 68);
       pdf.text(nameLines.slice(0, 2), margin + 22, y + 7);
 
       // Price (unit)
       pdf.setFont(this.font, 'bold');
-      pdf.setFontSize(8);
+      pdf.setFontSize(9);
       pdf.setTextColor(...this.gray);
       pdf.text(formatPrice(item.price), margin + 120, y + 12, { align: 'right' });
 
@@ -260,7 +260,7 @@ export class PdfService {
     const drawFooter = (): void => {
       y += 15;
       pdf.setFont(this.font, 'italic');
-      pdf.setFontSize(8);
+      pdf.setFontSize(9);
       pdf.setTextColor(...this.gray);
       pdf.text('Thank you for your business!', pageW / 2, y, { align: 'center' });
       y += 5;

@@ -169,7 +169,7 @@ export interface CartBountyCart {
                           <a [href]="getWhatsAppUrl(cart.phone)" target="_blank"
                              class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-50 text-green-700 hover:bg-green-100 text-xs font-medium transition"
                              (click)="trackWhatsApp(cart.id)">
-                            <i class="pi pi-whatsapp text-xs"></i> {{ cart.phone }}
+                            <i class="pi pi-whatsapp text-xs"></i> {{ displayPhone(cart.phone) }}
                           </a>
                           <a [href]="'tel:' + cart.phone" class="text-surface-400 hover:text-surface-600">
                             <i class="pi pi-phone text-xs"></i>
@@ -439,9 +439,18 @@ viewCart(cart: CartBountyCart): void {
     this.loadStats();
   }
 
+  displayPhone(phone: string): string {
+    if (!phone) return '';
+    const digits = phone.replace(/[^0-9]/g, '');
+    if (digits.length === 13 && digits.startsWith('91')) return digits.slice(2);
+    if (digits.length === 12 && digits.startsWith('0')) return digits.slice(2);
+    return digits.length > 10 ? digits.slice(-10) : digits;
+  }
+
   getWhatsAppUrl(phone: string): string {
     const clean = phone.replace(/[^0-9]/g, '');
-    return `https://wa.me/91${clean}?text=${encodeURIComponent(this.whatsappMsg)}`;
+    const num = clean.length > 10 && clean.startsWith('91') ? clean.slice(2) : clean;
+    return `https://wa.me/91${num}?text=${encodeURIComponent(this.whatsappMsg)}`;
   }
 
   getInitials(name: string): string {
