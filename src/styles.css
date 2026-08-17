@@ -44,7 +44,7 @@
   }
 
   .page-container {
-    @apply p-6 lg:p-8 max-w-7xl mx-auto animate-fade-in;
+    @apply p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto animate-fade-in;
   }
 
   .section-title {

@@ -43,104 +43,120 @@ export interface CartBountyCart {
   imports: [NgClass, FormsModule],
   template: `
     <div class="page-container">
-      <div class="page-header">
+      <!-- Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 class="page-title">Latest Cart Changes</h1>
-          <p class="text-surface-500 mt-1">Recent orders in cart from customers idle for at least 1 minute</p>
+          <p class="text-surface-500 mt-1 text-sm">Recent orders in cart from customers idle for at least 1 minute</p>
         </div>
-        <div class="flex items-center gap-3">
-          <span class="text-xs text-surface-400">Auto-refresh: 60s</span>
-          <button (click)="exportCsv()" class="btn-ghost">
-            <i class="pi pi-download"></i> Export CSV
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs text-surface-400 hidden sm:inline">Auto-refresh: 60s</span>
+          <button (click)="exportCsv()" class="btn-ghost text-sm">
+            <i class="pi pi-download"></i> <span class="hidden sm:inline">Export CSV</span>
           </button>
-          <button (click)="refresh()" class="btn-ghost">
+          <button (click)="refresh()" class="btn-ghost text-sm">
             <i class="pi pi-refresh" [ngClass]="{'animate-spin': loading()}"></i>
           </button>
         </div>
       </div>
 
-      
-
-      <!-- Stats Bar -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" style="display:none">
-        <div class="glass-card p-4 text-center">
-          <div class="text-2xl font-bold text-surface-900 dark:text-white">{{ stats().total }}</div>
-          <div class="text-xs text-surface-500 mt-1">Total Carts</div>
-        </div>
-        <div class="glass-card p-4 text-center">
-          <div class="text-2xl font-bold text-amber-600">{{ stats().active }}</div>
-          <div class="text-xs text-surface-500 mt-1">Active (24h)</div>
-        </div>
-        <div class="glass-card p-4 text-center">
-          <div class="text-2xl font-bold text-green-600">{{ stats().recovered }}</div>
-          <div class="text-xs text-surface-500 mt-1">Recovered</div>
-        </div>
-        <div class="glass-card p-4 text-center">
-          <div class="text-2xl font-bold text-blue-600">{{ utils.formatCurrency(stats().total_value) }}</div>
-          <div class="text-xs text-surface-500 mt-1">Cart Value at Risk</div>
-        </div>
-      </div>
-
       <!-- Filters -->
-      <div class="glass-card p-4 mb-6">
-        <div class="flex flex-wrap items-center gap-2">
+      <div class="glass-card p-3 sm:p-4 mb-4 sm:mb-6">
+        <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
           <!-- Time Range Filters -->
-          @for (f of timeRangeFilters; track f.key) {
-            <button (click)="setTimeFilter(f.key)"
-                    [class]="f.key === activeFilter() ? 'btn-primary' : 'btn-ghost'">
-              {{ f.label }}
-            </button>
-          }
-          <div class="flex items-center gap-2 ml-auto">
+          <div class="flex flex-wrap gap-1 sm:gap-2">
+            @for (f of timeRangeFilters; track f.key) {
+              <button (click)="setTimeFilter(f.key)"
+                      [class]="f.key === activeFilter() ? 'btn-primary' : 'btn-ghost'"
+                      class="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+                {{ f.label }}
+              </button>
+            }
+          </div>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:ml-auto w-full sm:w-auto">
+            <!-- Sort (mobile only) -->
+            <div class="flex items-center gap-2 md:hidden">
+              <label class="text-xs text-surface-500 shrink-0">Sort:</label>
+              <select (change)="onMobileSortChange($event)"
+                      class="text-xs px-2 py-1.5 rounded-lg border border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-800 text-surface-700 dark:text-surface-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 flex-1">
+                <option value="time-desc">Newest First</option>
+                <option value="time-asc">Oldest First</option>
+                <option value="cart_total-desc">Highest Total</option>
+                <option value="cart_total-asc">Lowest Total</option>
+              </select>
+            </div>
             <!-- Status Dropdown -->
             <select [(ngModel)]="activeStatusFilter" (ngModelChange)="onStatusFilterChange()"
-                    class="text-xs px-3 py-2 rounded-lg border border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-800 text-surface-700 dark:text-surface-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    class="text-xs px-3 py-2 rounded-lg border border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-800 text-surface-700 dark:text-surface-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 w-full sm:w-auto">
               @for (s of statusFilters; track s.key) {
                 <option [value]="s.key">{{ s.label }}</option>
               }
             </select>
             <!-- Search -->
-            <div class="relative min-w-[180px]">
+            <div class="relative w-full sm:w-auto sm:min-w-[180px]">
               <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-sm"></i>
               <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="onSearch()"
-                     placeholder="Search by name, email, or phone..." class="input-field pl-9">
+                     placeholder="Search..." class="input-field pl-9 text-xs sm:text-sm">
             </div>
           </div>
         </div>
       </div>
-      
+
       <div class="glass-card overflow-hidden">
         @if (loading()) {
-          <div class="p-6 space-y-4">
+          <!-- Desktop skeleton -->
+          <div class="p-4 sm:p-6 space-y-4 hidden md:block">
             @for (_ of [1,2,3,4,5]; track _) {
               <div class="flex gap-4 items-center">
-                <div class="skeleton-pulse h-10 w-10 rounded-full"></div>
+                <div class="skeleton-pulse h-10 w-10 rounded-full shrink-0"></div>
                 <div class="skeleton-pulse h-5 w-32"></div>
                 <div class="skeleton-pulse h-5 w-28"></div>
-                <div class="skeleton-pulse h-5 w-16"></div>
-                <div class="skeleton-pulse h-5 w-24 ml-auto"></div>
+                <div class="skeleton-pulse h-5 w-16 ml-auto"></div>
+                <div class="skeleton-pulse h-5 w-24"></div>
+              </div>
+            }
+          </div>
+          <!-- Mobile skeleton -->
+          <div class="p-4 space-y-4 md:hidden">
+            @for (_ of [1,2,3]; track _) {
+              <div class="flex items-start gap-3">
+                <div class="skeleton-pulse h-9 w-9 rounded-full shrink-0"></div>
+                <div class="flex-1 space-y-2">
+                  <div class="skeleton-pulse h-4 w-28"></div>
+                  <div class="skeleton-pulse h-3 w-40"></div>
+                  <div class="skeleton-pulse h-6 w-24 rounded-md mt-2"></div>
+                  <div class="flex justify-between items-center mt-3">
+                    <div class="skeleton-pulse h-4 w-16"></div>
+                    <div class="flex gap-1">
+                      <div class="skeleton-pulse h-8 w-8 rounded-md"></div>
+                      <div class="skeleton-pulse h-8 w-8 rounded-md"></div>
+                      <div class="skeleton-pulse h-8 w-8 rounded-md"></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             }
           </div>
         } @else if (!carts().length) {
-          <div class="text-center py-16 text-surface-400">
-            <i class="pi pi-smile text-4xl mb-4 block"></i>
-            <p class="text-lg font-medium">No latest cart changes</p>
-            <p class="text-sm mt-1">Carts will appear here after a customer is idle for 1 minute</p>
+          <div class="text-center py-12 sm:py-16 text-surface-400">
+            <i class="pi pi-smile text-3xl sm:text-4xl mb-4 block"></i>
+            <p class="text-base sm:text-lg font-medium">No latest cart changes</p>
+            <p class="text-xs sm:text-sm mt-1">Carts will appear here after a customer is idle for 1 minute</p>
           </div>
         } @else {
-          <div class="overflow-x-auto">
+          <!-- Desktop Table -->
+          <div class="overflow-x-auto hidden md:block">
             <table class="w-full">
               <thead>
                 <tr class="border-b border-surface-200 dark:border-surface-700">
                   <th class="text-left px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Customer</th>
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Contact</th>                  
-                  <th class="text-right px-4 py-3 text-xs font-semibold text-surface-500 uppercase cursor-pointer hover:text-surface-700" (click)="toggleSort('cart_total')">
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Contact</th>
+                  <th class="text-right px-4 py-3 text-xs font-semibold text-surface-500 uppercase cursor-pointer hover:text-surface-700" (click)="toggleSort('cart_total')" [attr.aria-label]="'Sort by cart total ' + (sortColumn() === 'cart_total' ? (sortDirection() === 'asc' ? 'descending' : 'ascending') : '')">
                     Cart Total {{ sortIcon('cart_total') }}
                   </th>
-                  <th class="text-right px-4 py-3 text-xs font-semibold text-surface-500 uppercase cursor-pointer hover:text-surface-700" (click)="toggleSort('time')">
+                  <th class="text-right px-4 py-3 text-xs font-semibold text-surface-500 uppercase cursor-pointer hover:text-surface-700" (click)="toggleSort('time')" [attr.aria-label]="'Sort by time ' + (sortColumn() === 'time' ? (sortDirection() === 'asc' ? 'descending' : 'ascending') : '')">
                     Last Cart Change {{ sortIcon('time') }}
-                  </th>                  
+                  </th>
                   <th class="text-right px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Actions</th>
                 </tr>
               </thead>
@@ -150,13 +166,13 @@ export interface CartBountyCart {
                     <!-- Customer -->
                     <td class="px-4 py-3">
                       <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-surface-200 dark:bg-surface-700 flex items-center justify-center text-sm font-semibold text-surface-600 dark:text-surface-300">
+                        <div class="w-8 h-8 rounded-full bg-surface-200 dark:bg-surface-700 flex items-center justify-center text-sm font-semibold text-surface-600 dark:text-surface-300 shrink-0">
                           {{ getInitials(getFullName(cart)) }}
                         </div>
-                        <div>
-                          <div class="text-sm font-medium text-surface-900 dark:text-white">{{ getFullName(cart) || 'Guest' }}</div>
+                        <div class="min-w-0">
+                          <div class="text-sm font-medium text-surface-900 dark:text-white truncate">{{ getFullName(cart) || 'Guest' }}</div>
                           @if (cart.email) {
-                            <div class="text-xs text-surface-400">{{ cart.email }}</div>
+                            <div class="text-xs text-surface-400 truncate">{{ cart.email }}</div>
                           }
                         </div>
                       </div>
@@ -180,7 +196,6 @@ export interface CartBountyCart {
                       }
                     </td>
 
-                   
                     <!-- Cart Total -->
                     <td class="px-4 py-3 text-right">
                       <span class="text-sm font-bold text-surface-900 dark:text-white">{{ utils.formatCurrency(cart.cart_total) }}</span>
@@ -189,7 +204,7 @@ export interface CartBountyCart {
                     <!-- Time -->
                     <td class="px-4 py-3 text-right">
                       <span class="text-sm text-surface-500">{{ getTimeAgo(cart.time) }}</span>
-                    </td>                    
+                    </td>
 
                     <!-- Actions -->
                     <td class="px-4 py-3 text-right">
@@ -240,12 +255,94 @@ export interface CartBountyCart {
             </table>
           </div>
 
+          <!-- Mobile Cards -->
+          <div class="md:hidden divide-y divide-surface-100 dark:divide-surface-800">
+            @for (cart of carts(); track cart.id) {
+              <div class="p-4 hover:bg-surface-50 dark:hover:bg-surface-800/30 transition">
+                <!-- Top: Avatar + Name + Time -->
+                <div class="flex items-start justify-between gap-3 mb-3">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-full bg-surface-200 dark:bg-surface-700 flex items-center justify-center text-sm font-semibold text-surface-600 dark:text-surface-300 shrink-0">
+                      {{ getInitials(getFullName(cart)) }}
+                    </div>
+                    <div class="min-w-0">
+                      <div class="text-sm font-medium text-surface-900 dark:text-white truncate">{{ getFullName(cart) || 'Guest' }}</div>
+                      @if (cart.email) {
+                        <div class="text-xs text-surface-400 truncate">{{ cart.email }}</div>
+                      }
+                    </div>
+                  </div>
+                  <span class="text-xs text-surface-400 shrink-0">{{ getTimeAgo(cart.time) }}</span>
+                </div>
+
+                <!-- Contact -->
+                @if (cart.phone) {
+                  <div class="flex items-center gap-2 mb-3">
+                    <a [href]="getWhatsAppUrl(cart.phone)" target="_blank"
+                       class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-50 text-green-700 hover:bg-green-100 text-xs font-medium transition"
+                       (click)="trackWhatsApp(cart.id)">
+                      <i class="pi pi-whatsapp text-xs"></i> {{ displayPhone(cart.phone) }}
+                    </a>
+                    <a [href]="'tel:' + cart.phone" class="text-surface-400 hover:text-surface-600">
+                      <i class="pi pi-phone text-xs"></i>
+                    </a>
+                  </div>
+                }
+
+                <!-- Bottom: Total + Actions -->
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-bold text-surface-900 dark:text-white">{{ utils.formatCurrency(cart.cart_total) }}</span>
+                  <div class="flex items-center gap-1">
+                    <button (click)="viewCart(cart)"
+                            class="p-2 rounded-md text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-700 transition"
+                            title="View">
+                      <i class="pi pi-eye"></i>
+                    </button>
+                    <button (click)="sendWhatsAppWithPdf(cart)"
+                            [disabled]="!cart.phone || sendingPdfId() === cart.id"
+                            class="p-2 rounded-md text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                            [title]="cart.phone ? 'WhatsApp' : 'Phone number missing'">
+                      @if (sendingPdfId() === cart.id) {
+                        <i class="pi pi-spin pi-spinner"></i>
+                      } @else {
+                        <i class="pi pi-whatsapp"></i>
+                      }
+                    </button>
+                    @if (cart.phone) {
+                      <a [href]="'tel:' + cart.phone"
+                        class="p-2 rounded-md text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-700 transition"
+                        title="Call">
+                        <i class="pi pi-phone"></i>
+                      </a>
+                    } @else {
+                      <button disabled
+                              class="p-2 rounded-md text-surface-500 opacity-30 cursor-not-allowed"
+                              title="Phone number missing">
+                        <i class="pi pi-phone"></i>
+                      </button>
+                    }
+                    <button (click)="downloadPdf(cart.id)"
+                            class="p-2 rounded-md text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-700 transition"
+                            title="Download PDF">
+                      <i class="pi pi-file-pdf"></i>
+                    </button>
+                    <button (click)="deleteCart(cart.id)"
+                            class="p-2 rounded-md text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                            title="Delete">
+                      <i class="pi pi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+
           <!-- Pagination -->
-          <div class="flex items-center justify-between px-4 py-3 border-t border-surface-200 dark:border-surface-700">
-            <span class="text-sm text-surface-400">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t border-surface-200 dark:border-surface-700">
+            <span class="text-xs sm:text-sm text-surface-400">
               Showing {{ (currentPage() - 1) * perPage + 1 }}–{{ Math.min(currentPage() * perPage, totalCarts()) }} of {{ totalCarts() }}
             </span>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1 sm:gap-2">
               <button [disabled]="currentPage() <= 1" (click)="changePage(currentPage() - 1)"
                       class="btn-ghost p-1.5 disabled:opacity-30">
                 <i class="pi pi-chevron-left"></i>
@@ -254,7 +351,7 @@ export interface CartBountyCart {
                 <button (click)="changePage(p)"
                         [class.bg-primary-600!]="p === currentPage()"
                         [class.text-white!]="p === currentPage()"
-                        class="w-8 h-8 rounded-lg text-sm font-medium hover:bg-surface-100 dark:hover:bg-surface-700 transition">
+                        class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs sm:text-sm font-medium hover:bg-surface-100 dark:hover:bg-surface-700 transition">
                   {{ p }}
                 </button>
               }
@@ -423,6 +520,15 @@ viewCart(cart: CartBountyCart): void {
   }
 
   onSearch(): void {
+    this.currentPage.set(1);
+    this.loadCarts();
+  }
+
+  onMobileSortChange(event: Event): void {
+    const val = (event.target as HTMLSelectElement).value;
+    const [col, dir] = val.split('-');
+    this.sortColumn.set(col);
+    this.sortDirection.set(dir as 'asc' | 'desc');
     this.currentPage.set(1);
     this.loadCarts();
   }

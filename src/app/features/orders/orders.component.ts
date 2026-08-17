@@ -15,48 +15,50 @@ import { Order } from '../../core/interfaces';
   providers: [MessageService],
   template: `
     <div class="page-container">
-      <div class="page-header">
+      <!-- Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 class="page-title">Orders</h1>
-          <p class="text-surface-500 mt-1">Manage and view all WooCommerce orders</p>
+          <p class="text-surface-500 mt-1 text-sm">Manage and view all WooCommerce orders</p>
         </div>
-        <div class="flex items-center gap-3">
-          <button (click)="exportCsv()" class="btn-ghost" [disabled]="!orders().length">
-            <i class="pi pi-download"></i>
-            Export CSV
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs text-surface-400">{{ totalOrders() }} orders</span>
+          <button (click)="exportCsv()" class="btn-ghost text-sm" [disabled]="!orders().length">
+            <i class="pi pi-download"></i> <span class="hidden sm:inline">Export CSV</span>
           </button>
-          <button (click)="refresh()" class="btn-ghost">
+          <button (click)="refresh()" class="btn-ghost text-sm">
             <i class="pi pi-refresh" [ngClass]="{'animate-spin': loading()}"></i>
           </button>
         </div>
       </div>
 
       <!-- Filters -->
-      <div class="glass-card p-4 mb-6">
-        <div class="flex flex-wrap items-center gap-3">
-          <div class="relative flex-1 min-w-[200px]">
+      <div class="glass-card p-3 sm:p-4 mb-4 sm:mb-6">
+        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <div class="relative flex-1 min-w-0 sm:min-w-[200px]">
             <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-sm"></i>
             <input type="text" [value]="searchTerm()" (input)="searchTerm.set($any($event.target).value); loadOrders()"
-                   placeholder="Search orders..." class="input-field pl-9">
+                   placeholder="Search orders..." class="input-field pl-9 text-xs sm:text-sm">
           </div>
-          <select [value]="statusFilter()" (change)="statusFilter.set($any($event.target).value); loadOrders()"
-                  class="input-field w-auto min-w-[150px]">
-            <option value="">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="processing">Processing</option>
-            <option value="completed">Completed</option>
-            <option value="on-hold">On Hold</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="refunded">Refunded</option>
-          </select>
-          <span class="text-sm text-surface-400">{{ totalOrders() }} orders</span>
+          <div class="flex gap-2">
+            <select [value]="statusFilter()" (change)="statusFilter.set($any($event.target).value); loadOrders()"
+                    class="input-field text-xs sm:text-sm min-w-0 w-full sm:w-auto sm:min-w-[150px]">
+              <option value="">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="processing">Processing</option>
+              <option value="completed">Completed</option>
+              <option value="on-hold">On Hold</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="refunded">Refunded</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <!-- Orders Table -->
       <div class="glass-card overflow-hidden">
         @if (loading()) {
-          <div class="p-6 space-y-4">
+          <!-- Desktop skeleton -->
+          <div class="p-4 sm:p-6 space-y-4 hidden md:block">
             @for (_ of [1,2,3,4,5]; track _) {
               <div class="flex items-center gap-4">
                 <div class="skeleton-pulse h-5 w-20"></div>
@@ -68,14 +70,37 @@ import { Order } from '../../core/interfaces';
               </div>
             }
           </div>
+          <!-- Mobile skeleton -->
+          <div class="p-4 space-y-4 md:hidden">
+            @for (_ of [1,2,3]; track _) {
+              <div class="flex items-start gap-3">
+                <div class="flex-1 space-y-2">
+                  <div class="flex justify-between items-center">
+                    <div class="skeleton-pulse h-4 w-16"></div>
+                    <div class="skeleton-pulse h-5 w-16 rounded-full"></div>
+                  </div>
+                  <div class="skeleton-pulse h-4 w-32"></div>
+                  <div class="skeleton-pulse h-3 w-24"></div>
+                  <div class="flex justify-between items-center mt-2">
+                    <div class="skeleton-pulse h-4 w-20"></div>
+                    <div class="flex gap-1">
+                      <div class="skeleton-pulse h-8 w-8 rounded-md"></div>
+                      <div class="skeleton-pulse h-8 w-8 rounded-md"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
         } @else if (!orders().length) {
-          <div class="text-center py-16 text-surface-400">
-            <i class="pi pi-shopping-cart text-4xl mb-4 block"></i>
-            <p class="text-lg font-medium">No orders found</p>
-            <p class="text-sm mt-1">Try adjusting your search or filter</p>
+          <div class="text-center py-12 sm:py-16 text-surface-400">
+            <i class="pi pi-shopping-cart text-3xl sm:text-4xl mb-4 block"></i>
+            <p class="text-base sm:text-lg font-medium">No orders found</p>
+            <p class="text-xs sm:text-sm mt-1">Try adjusting your search or filter</p>
           </div>
         } @else {
-          <div class="overflow-x-auto">
+          <!-- Desktop Table -->
+          <div class="overflow-x-auto hidden md:block">
             <table class="w-full">
               <thead>
                 <tr class="border-b border-surface-200 dark:border-surface-700">
@@ -101,7 +126,7 @@ import { Order } from '../../core/interfaces';
                       <div class="flex items-center justify-end gap-2">
                         <a [routerLink]="['/orders', order.id]" class="btn-ghost p-1.5" title="View">
                           <i class="pi pi-eye"></i>
-                        </a>                        
+                        </a>
                         <button (click)="sendWhatsAppWithPdf(order)"
                                 [disabled]="!order.mobile || sendingPdfId() === order.id"
                                 class="btn-ghost p-1.5 text-green-600 hover:text-green-700"
@@ -120,10 +145,50 @@ import { Order } from '../../core/interfaces';
             </table>
           </div>
 
+          <!-- Mobile Cards -->
+          <div class="md:hidden divide-y divide-surface-100 dark:divide-surface-800">
+            @for (order of orders(); track order.id) {
+              <div class="p-4 hover:bg-surface-50 dark:hover:bg-surface-800/30 transition">
+                <!-- Top: Order # + Status -->
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm font-medium text-surface-900 dark:text-white">#{{ order.orderNumber }}</span>
+                  <span [class]="utils.getStatusClass(order.status)">{{ utils.getStatusLabel(order.status) }}</span>
+                </div>
+                <!-- Customer + Mobile -->
+                <div class="text-sm text-surface-700 dark:text-surface-300 mb-1">{{ order.customerName }}</div>
+                <div class="text-xs text-surface-500 mb-3">{{ utils.formatIndianMobile(order.mobile) || '—' }}</div>
+                <!-- Bottom: Amount + Date + Actions -->
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <span class="text-sm font-bold text-surface-900 dark:text-white">{{ utils.formatCurrency(order.total) }}</span>
+                    <span class="text-xs text-surface-400">{{ order.dateCreated | date:'dd MMM, hh:mm a' }}</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <a [routerLink]="['/orders', order.id]"
+                       class="p-2 rounded-md text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-700 transition"
+                       title="View">
+                      <i class="pi pi-eye"></i>
+                    </a>
+                    <button (click)="sendWhatsAppWithPdf(order)"
+                            [disabled]="!order.mobile || sendingPdfId() === order.id"
+                            class="p-2 rounded-md text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                            [title]="order.mobile ? 'WhatsApp' : 'Phone number missing'">
+                      @if (sendingPdfId() === order.id) {
+                        <i class="pi pi-spin pi-spinner"></i>
+                      } @else {
+                        <i class="pi pi-whatsapp"></i>
+                      }
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+
           <!-- Pagination -->
-          <div class="flex items-center justify-between px-4 py-3 border-t border-surface-200 dark:border-surface-700">
-            <span class="text-sm text-surface-400">Page {{ currentPage() }} of {{ totalPages() }}</span>
-            <div class="flex items-center gap-2">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t border-surface-200 dark:border-surface-700">
+            <span class="text-xs sm:text-sm text-surface-400">Page {{ currentPage() }} of {{ totalPages() }}</span>
+            <div class="flex items-center gap-1 sm:gap-2">
               <button [disabled]="currentPage() <= 1" (click)="changePage(currentPage() - 1)"
                       class="btn-ghost p-1.5 disabled:opacity-30" [class.cursor-not-allowed]="currentPage() <= 1">
                 <i class="pi pi-chevron-left"></i>
@@ -132,7 +197,7 @@ import { Order } from '../../core/interfaces';
                 <button (click)="changePage(p)"
                         [class.bg-primary-600!]="p === currentPage()"
                         [class.text-white!]="p === currentPage()"
-                        class="w-8 h-8 rounded-lg text-sm font-medium hover:bg-surface-100 dark:hover:bg-surface-700 transition">
+                        class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs sm:text-sm font-medium hover:bg-surface-100 dark:hover:bg-surface-700 transition">
                   {{ p }}
                 </button>
               }
