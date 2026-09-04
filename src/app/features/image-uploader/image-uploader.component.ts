@@ -55,8 +55,8 @@ interface UploadedItem {
             <div class="relative group rounded-lg overflow-hidden border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900"
                  style="aspect-ratio: 480 / 620;">
               <!-- Image -->
-              @if (item.status === 'done') {
-                <img [src]="item.processed.dataUrl"
+              @if (item.status === 'done' && item.processed; as img) {
+                <img [src]="img.dataUrl"
                      [alt]="item.file.name"
                      class="w-full h-full object-cover" />
               }
@@ -77,11 +77,11 @@ interface UploadedItem {
               }
 
               <!-- Overlay info -->
-              @if (item.status === 'done') {
+              @if (item.processed; as img) {
                 <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 group-hover:opacity-100 transition">
                   <p class="text-xs text-white truncate">{{ item.file.name }}</p>
                   <p class="text-xs text-white/80">
-                    {{ item.processed.width }}×{{ item.processed.height }} · {{ formatBytes(item.processed.processedSize) }}
+                    {{ img.width }}×{{ img.height }} · {{ formatBytes(img.processedSize) }}
                   </p>
                 </div>
               }
