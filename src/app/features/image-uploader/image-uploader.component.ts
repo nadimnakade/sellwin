@@ -203,14 +203,14 @@ export class ImageUploaderComponent {
       if (!validation.valid) {
         this.items.update((list) => [
           ...list,
-          { id, file, processed: null as any, status: 'error', error: validation.error },
+          { id, file, processed: null, status: 'error', error: validation.error },
         ]);
         continue;
       }
 
       this.items.update((list) => [
         ...list,
-        { id, file, processed: null as any, status: 'processing' },
+        { id, file, processed: null, status: 'processing' },
       ]);
 
       try {
