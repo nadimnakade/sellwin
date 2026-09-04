@@ -118,6 +118,7 @@ export class LayoutComponent implements OnInit {
     { label: 'Orders', icon: 'pi pi-shopping-cart', route: '/orders' },
     { label: 'Latest Cart Changes', icon: 'pi pi-exclamation-triangle', route: '/latest-carts' },
     { label: 'Customers', icon: 'pi pi-users', route: '/customers' },
+    { label: 'Image Upload', icon: 'pi pi-image', route: '/image-upload-demo' },
     { label: 'Settings', icon: 'pi pi-cog', route: '/settings' },
   ];
 
