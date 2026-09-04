@@ -45,6 +45,10 @@ export const routes: Routes = [
         path: 'settings',
         loadComponent: () => import('./features/settings/settings.component').then((c) => c.SettingsComponent),
       },
+      {
+        path: 'image-upload-demo',
+        loadComponent: () => import('./features/image-uploader/image-upload-demo.component').then((c) => c.ImageUploadDemoComponent),
+      },
     ],
   },
   { path: '**', redirectTo: '/dashboard' },
