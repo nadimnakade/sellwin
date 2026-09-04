@@ -175,7 +175,7 @@ export class ImageUploaderComponent {
     this.errorMessage.set('');
     this.emitChanges();
 
-    if (item.status === 'done') {
+    if (item.status === 'done' && item.processed) {
       this.imageRemoved.emit(item.processed);
     }
   }
