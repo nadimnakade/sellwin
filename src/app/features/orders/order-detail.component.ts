@@ -147,7 +147,6 @@ import { Address, OrderDetail, OrderItem } from '../../core/interfaces';
               <div class="px-4 py-3.5 border-b border-surface-200 dark:border-surface-700 flex items-center gap-3"><i class="pi pi-file text-primary-600"></i><h3 class="font-bold text-surface-900 dark:text-white">Billing Information</h3></div>
               <div class="p-4 text-sm text-surface-600 dark:text-surface-300 space-y-1"><p class="font-semibold text-surface-900 dark:text-white">{{ o.billing.company || formatRecipient(o.billing) }}</p>@if (o.billing.company) { <p>{{ formatRecipient(o.billing) }}</p> }<p class="leading-5">{{ formatAddress(o.billing) }}</p><p>{{ o.billing.mobile || o.customer.mobile }}</p></div>
             </section>
-
             <section class="glass-card-solid overflow-hidden">
               <div class="px-4 py-3.5 border-b border-surface-200 dark:border-surface-700 flex items-center gap-3"><i class="pi pi-truck text-primary-600"></i><h3 class="font-bold text-surface-900 dark:text-white">Shipping Information</h3></div>
               <div class="p-4 text-sm text-surface-600 dark:text-surface-300 space-y-1"><p class="font-semibold text-surface-900 dark:text-white">{{ shipTo.company || formatRecipient(shipTo) }}</p>@if (shipTo.company) { <p>{{ formatRecipient(shipTo) }}</p> }<p class="leading-5">{{ formatAddress(shipTo) }}</p><p>{{ shipTo.mobile || o.billing.mobile || o.customer.mobile }}</p></div>
@@ -156,7 +155,6 @@ import { Address, OrderDetail, OrderItem } from '../../core/interfaces';
               <div class="px-4 py-3.5 border-b border-surface-200 dark:border-surface-700 flex items-center gap-3"><i class="pi pi-cog text-primary-600"></i><h3 class="font-bold text-surface-900 dark:text-white">Actions</h3></div>
               <div class="p-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2 gap-2"><button (click)="downloadPdf()" class="btn-ghost justify-center whitespace-nowrap"><i class="pi pi-download"></i> Download Invoice</button><button (click)="sendWhatsAppWithPdf(o)" [disabled]="!o.customer.mobile || sendingPdf()" class="btn-ghost justify-center whitespace-nowrap text-green-600 disabled:opacity-40"><i class="pi pi-whatsapp"></i> Share on WhatsApp</button></div>
             </section>
-
             @if (o.note) { <section class="glass-card-solid p-4"><h3 class="font-bold text-surface-900 dark:text-white mb-2">Customer Note</h3><p class="text-sm leading-5 text-surface-600 dark:text-surface-300">{{ o.note }}</p></section> }
           </aside>
         </div>
