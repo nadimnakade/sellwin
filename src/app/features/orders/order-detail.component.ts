@@ -139,12 +139,10 @@ import { Address, OrderDetail, OrderItem } from '../../core/interfaces';
                 <div class="flex justify-between items-center mt-3 p-3 rounded-xl bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"><span class="font-semibold">Total Amount</span><span class="text-xl font-bold">{{ utils.formatCurrency(o.total) }}</span></div>
               </div>
             </section>
-
             <section class="glass-card-solid overflow-hidden">
               <div class="px-4 py-3.5 border-b border-surface-200 dark:border-surface-700 flex items-center gap-3"><i class="pi pi-credit-card text-primary-600"></i><h3 class="font-bold text-surface-900 dark:text-white">Payment Details</h3></div>
               <div class="p-4 flex gap-3"><div class="w-9 h-9 shrink-0 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 flex items-center justify-center"><i class="pi pi-check"></i></div><div><p class="text-sm font-semibold text-surface-900 dark:text-white">{{ o.paymentMethod || 'N/A' }}</p><p class="text-xs text-surface-400 mt-1">Paid: {{ o.datePaid ? (o.datePaid | date:'dd MMM yyyy, hh:mm a') : 'N/A' }}</p></div></div>
             </section>
-
             <section class="glass-card-solid overflow-hidden">
               <div class="px-4 py-3.5 border-b border-surface-200 dark:border-surface-700 flex items-center gap-3"><i class="pi pi-file text-primary-600"></i><h3 class="font-bold text-surface-900 dark:text-white">Billing Information</h3></div>
               <div class="p-4 text-sm text-surface-600 dark:text-surface-300 space-y-1"><p class="font-semibold text-surface-900 dark:text-white">{{ o.billing.company || formatRecipient(o.billing) }}</p>@if (o.billing.company) { <p>{{ formatRecipient(o.billing) }}</p> }<p class="leading-5">{{ formatAddress(o.billing) }}</p><p>{{ o.billing.mobile || o.customer.mobile }}</p></div>
