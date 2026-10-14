@@ -1,0 +1,3 @@
+# Netlify SPA routing fix
+# All routes go to index.html, Angular router takes over
+/*    /index.html   200

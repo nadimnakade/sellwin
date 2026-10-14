@@ -26,57 +26,111 @@ import { DashboardStats, RevenueTrend, OrdersTrend, AbandonedTrend, TopProduct, 
       @if (loading()) {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           @for (_ of [1,2,3,4]; track _) {
-            <div class="stat-card">
-              <div class="skeleton-pulse h-3 w-24 mb-3"></div>
-              <div class="skeleton-pulse h-8 w-32 mb-2"></div>
-              <div class="skeleton-pulse h-3 w-20"></div>
-            </div>
+            <div class="skeleton-pulse h-44 rounded-2xl"></div>
           }
         </div>
       } @else {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-          <div class="stat-card">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-sm font-medium text-surface-500">Revenue Today</span>
-              <div class="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
-                <i class="pi pi-dollar text-green-600 dark:text-green-400"></i>
+          <!-- Revenue Today -->
+          <div class="stat-card-gradient stat-card-teal">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                  <i class="pi pi-dollar text-emerald-400 text-sm"></i>
+                </div>
+                <span class="text-sm font-medium text-white/90">Revenue Today</span>
               </div>
+              <i class="pi pi-chevron-right text-white/50 text-sm"></i>
             </div>
-            <p class="text-3xl font-bold text-surface-900 dark:text-white">{{ utils.formatCurrency(stats().revenueToday) }}</p>
-            <p class="text-xs text-surface-400 mt-1">Last 24 hours</p>
+            <p class="text-3xl font-bold text-white">{{ utils.formatCurrency(stats().revenueToday) }}</p>
+            <div class="flex items-end justify-between mt-1">
+              <div class="flex items-center gap-1 text-xs text-emerald-300">
+                <i class="pi pi-arrow-up text-[10px]"></i>
+                <span>Last 24 hours</span>
+              </div>
+              <svg class="w-14 h-14 -mb-2 -mr-1 text-emerald-400/30" viewBox="0 0 80 80" fill="currentColor">
+                <circle cx="28" cy="22" r="6"/><circle cx="50" cy="22" r="6"/><circle cx="40" cy="14" r="6"/>
+                <path d="M14 56c0-8 6-14 14-14h24c8 0 14 6 14 14v4H14v-4z" opacity="0.8"/>
+                <rect x="32" y="36" width="16" height="20" rx="3" opacity="0.6"/>
+              </svg>
+            </div>
           </div>
 
-          <div class="stat-card">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-sm font-medium text-surface-500">Orders Today</span>
-              <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
-                <i class="pi pi-shopping-bag text-blue-600 dark:text-blue-400"></i>
+          <!-- Orders Today -->
+          <div class="stat-card-gradient stat-card-amber">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                  <i class="pi pi-shopping-bag text-amber-300 text-sm"></i>
+                </div>
+                <span class="text-sm font-medium text-white/90">Orders Today</span>
               </div>
+              <i class="pi pi-chevron-right text-white/50 text-sm"></i>
             </div>
-            <p class="text-3xl font-bold text-surface-900 dark:text-white">{{ stats().ordersToday }}</p>
-            <p class="text-xs text-surface-400 mt-1">Total orders placed</p>
+            <p class="text-3xl font-bold text-white">{{ stats().ordersToday }}</p>
+            <div class="flex items-end justify-between mt-1">
+              <div class="flex items-center gap-1 text-xs text-amber-300">
+                <i class="pi pi-arrow-up text-[10px]"></i>
+                <span>Total orders placed</span>
+              </div>
+              <svg class="w-14 h-14 -mb-2 -mr-1 text-amber-400/40" viewBox="0 0 80 80" fill="currentColor">
+                <path d="M8 40l64-28v56L8 40z" opacity="0.85"/>
+                <path d="M20 40l52-22v44L20 40z" opacity="0.4" fill="white"/>
+                <path d="M8 40l28 12-2-20L8 40z" fill="white" opacity="0.2"/>
+              </svg>
+            </div>
           </div>
 
-          <div class="stat-card">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-sm font-medium text-surface-500">Active Carts</span>
-              <div class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center">
-                <i class="pi pi-clock text-amber-600 dark:text-amber-400"></i>
+          <!-- Active Carts -->
+          <div class="stat-card-gradient stat-card-blue">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-sky-500/20 flex items-center justify-center">
+                  <i class="pi pi-clock text-sky-300 text-sm"></i>
+                </div>
+                <span class="text-sm font-medium text-white/90">Active Carts</span>
               </div>
+              <i class="pi pi-chevron-right text-white/50 text-sm"></i>
             </div>
-            <p class="text-3xl font-bold text-surface-900 dark:text-white">{{ stats().activeCarts }}</p>
-            <p class="text-xs text-surface-400 mt-1">Shopping right now</p>
+            <p class="text-3xl font-bold text-white">{{ stats().activeCarts }}</p>
+            <div class="flex items-end justify-between mt-1">
+              <div class="flex items-center gap-1 text-xs text-sky-300">
+                <i class="pi pi-arrow-up text-[10px]"></i>
+                <span>Shopping right now</span>
+              </div>
+              <svg class="w-14 h-14 -mb-2 -mr-1 text-sky-400/40" viewBox="0 0 80 80" fill="currentColor">
+                <rect x="10" y="44" width="12" height="28" rx="2" opacity="0.6"/>
+                <rect x="28" y="32" width="12" height="40" rx="2" opacity="0.75"/>
+                <rect x="46" y="20" width="12" height="52" rx="2" opacity="0.9"/>
+                <rect x="64" y="10" width="12" height="62" rx="2"/>
+              </svg>
+            </div>
           </div>
 
-          <div class="stat-card">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-sm font-medium text-surface-500">Latest Cart Changes</span>
-              <div class="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                <i class="pi pi-exclamation-circle text-red-600 dark:text-red-400"></i>
+          <!-- Latest Cart Changes -->
+          <div class="stat-card-gradient stat-card-red">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
+                  <i class="pi pi-exclamation-circle text-red-300 text-sm"></i>
+                </div>
+                <span class="text-sm font-medium text-white/90">Latest Cart Changes</span>
               </div>
+              <i class="pi pi-chevron-right text-white/50 text-sm"></i>
             </div>
-            <p class="text-3xl font-bold text-surface-900 dark:text-white">{{ stats().latestCarts }}</p>
-            <p class="text-xs text-surface-400 mt-1">Idle for 1 minute</p>
+            <p class="text-3xl font-bold text-white">{{ stats().latestCarts }}</p>
+            <div class="flex items-end justify-between mt-1">
+              <div class="flex items-center gap-1 text-xs text-red-300">
+                <i class="pi pi-arrow-up text-[10px]"></i>
+                <span>Idle for 1 minute</span>
+              </div>
+              <svg class="w-14 h-14 -mb-2 -mr-1 text-red-400/40" viewBox="0 0 80 80" fill="currentColor">
+                <circle cx="40" cy="28" r="10" opacity="0.85"/>
+                <path d="M22 60c0-10 8-18 18-18s18 8 18 18v6H22v-6z" opacity="0.7"/>
+                <circle cx="60" cy="58" r="9" fill="#ef4444" stroke="#0f172a" stroke-width="2"/>
+                <path d="M56 54l8 8M64 54l-8 8" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
           </div>
         </div>
       }

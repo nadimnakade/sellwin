@@ -315,6 +315,7 @@ function mapWCOrderDetail(o: any): OrderDetail {
       email: o.billing?.email || '',
     },
     billing: {
+      company: o.billing?.company || '',
       firstName: o.billing?.first_name || '',
       lastName: o.billing?.last_name || '',
       mobile: formatIndianMobile(o.billing?.phone || ''),
@@ -327,6 +328,7 @@ function mapWCOrderDetail(o: any): OrderDetail {
       country: o.billing?.country || '',
     },
     shipping: {
+      company: o.shipping?.company || '',
       firstName: o.shipping?.first_name || '',
       lastName: o.shipping?.last_name || '',
       mobile: formatIndianMobile(o.shipping?.phone || ''),
@@ -371,6 +373,7 @@ function mapSellwinOrderDetail(o: any): OrderDetail {
       email: o.customer?.email || '',
     },
     billing: {
+      company: o.billing?.company || '',
       firstName: o.billing?.firstName || '',
       lastName: o.billing?.lastName || '',
       mobile: formatIndianMobile(o.billing?.mobile || ''),
@@ -383,6 +386,7 @@ function mapSellwinOrderDetail(o: any): OrderDetail {
       country: o.billing?.country || '',
     },
     shipping: {
+      company: o.shipping?.company || '',
       firstName: o.shipping?.firstName || '',
       lastName: o.shipping?.lastName || '',
       mobile: formatIndianMobile(o.shipping?.mobile || ''),

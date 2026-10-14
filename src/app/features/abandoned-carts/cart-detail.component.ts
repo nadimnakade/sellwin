@@ -254,6 +254,7 @@ export class CartDetailComponent implements OnInit {
         email: cart.email || '',
       },
       billing: {
+        company: '',
         firstName: cart.name || '',
         lastName: cart.surname || '',
         mobile: cart.phone || '',
@@ -266,6 +267,7 @@ export class CartDetailComponent implements OnInit {
         country: '',
       },
       shipping: {
+        company: '',
         firstName: '',
         lastName: '',
         mobile: '',

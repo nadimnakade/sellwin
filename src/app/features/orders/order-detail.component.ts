@@ -7,7 +7,7 @@ import { ToastModule } from 'primeng/toast';
 import { ApiService } from '../../core/services/api.service';
 import { UtilsService } from '../../core/services/utils.service';
 import { PdfService, PdfConfig } from '../../core/services/pdf.service';
-import { OrderDetail, OrderItem } from '../../core/interfaces';
+import { Address, OrderDetail, OrderItem } from '../../core/interfaces';
 
 @Component({
   selector: 'app-order-detail',
@@ -17,192 +17,152 @@ import { OrderDetail, OrderItem } from '../../core/interfaces';
   template: `
     <p-toast />
     <div class="page-container">
-      <div class="page-header">
-        <div class="flex items-center gap-4">
-          <a routerLink="/orders" class="btn-ghost p-2" title="Back to orders">
-            <i class="pi pi-arrow-left"></i>
-          </a>
-          <div>
-            <h1 class="page-title">Order #{{ order()?.orderNumber }}</h1>
-            <p class="text-surface-500 mt-1">{{ order()?.dateCreated | date:'dd MMM yyyy, hh:mm a' }}</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          
-        </div>
-        @if (order(); as o) {
-          <div class="flex flex-wrap items-center gap-2">
-            <button (click)="downloadPdf()" class="btn-ghost">
-              <i class="pi pi-file-pdf"></i> Download PDF
-            </button>
-            <button (click)="sendWhatsAppWithPdf(o)"
-                    [disabled]="!o.customer.mobile || sendingPdf()"
-                    class="btn-ghost text-green-600 disabled:opacity-40">
-              @if (sendingPdf()) {
-                <i class="pi pi-spin pi-spinner"></i>
-              } @else {
-                <i class="pi pi-whatsapp"></i>
-              }
-              {{ sendingPdf() ? 'Sending...' : 'WhatsApp' }}
-            </button>
-          </div>
-        }
-      </div>
-
       @if (loading()) {
-        <div class="glass-card p-6 space-y-4">
-          @for (_ of [1,2,3,4,5]; track _) {
-            <div class="skeleton-pulse h-5 w-3/4"></div>
-          }
+        <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-5">
+          <div class="glass-card p-6 space-y-4">
+            @for (_ of [1,2,3,4,5]; track _) { <div class="skeleton-pulse h-12 w-full"></div> }
+          </div>
+          <div class="space-y-4">
+            @for (_ of [1,2,3]; track _) { <div class="glass-card p-6"><div class="skeleton-pulse h-24 w-full"></div></div> }
+          </div>
         </div>
       } @else {
-        @if (order(); as o) {
-        <div class="glass-card overflow-hidden">
-          <div class="p-5 border-b border-surface-200 dark:border-surface-700 flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5">
-            <div class="space-y-4">
+      @if (order(); as o) {
+        @let shipTo = getShippingAddress(o);
+
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
+          <div class="flex items-center gap-4 min-w-0">
+            <a routerLink="/orders" class="w-10 h-10 shrink-0 rounded-xl border border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-900 flex items-center justify-center text-surface-500 hover:text-primary-600 hover:border-primary-200 transition-colors" title="Back to orders">
+              <i class="pi pi-arrow-left"></i>
+            </a>
+            <div class="min-w-0">
               <div class="flex flex-wrap items-center gap-3">
-                <h2 class="text-xl font-bold text-surface-900 dark:text-white">Order #{{ o.orderNumber }}</h2>
+                <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-surface-900 dark:text-white">Order #{{ o.orderNumber }}</h1>
                 <span [class]="utils.getStatusClass(o.status)">{{ utils.getStatusLabel(o.status) }}</span>
               </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div>
-                  <p class="text-xs font-semibold uppercase text-surface-400">Order Status</p>
-                  <div class="mt-2 flex items-center gap-2">
-                    <select [(ngModel)]="selectedStatus"
-                            [disabled]="savingStatus()"
-                            class="input-field min-w-[170px]">
-                      @for (status of statusOptions; track status.value) {
-                        <option [value]="status.value">{{ status.label }}</option>
-                      }
-                    </select>
-                    <button (click)="saveStatus()"
-                            [disabled]="savingStatus() || selectedStatus === o.status"
-                            class="btn-primary disabled:opacity-40">
-                      {{ savingStatus() ? 'Saving...' : 'Update' }}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <p class="text-xs font-semibold uppercase text-surface-400">Order Date</p>
-                  <p class="text-sm font-medium text-surface-900 dark:text-white mt-2">{{ o.dateCreated | date:'dd MMM yyyy, hh:mm a' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs font-semibold uppercase text-surface-400">Customer Details</p>
-                  <div class="mt-2 flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center gap-2 rounded-full bg-green-100 text-green-700 px-3 py-1 text-sm font-semibold">
-                      {{ o.customer.mobile || 'No mobile' }}
-                      @if (o.customer.mobile) { <i class="pi pi-phone text-xs"></i> }
-                    </span>
-                    <span class="text-sm text-surface-500">{{ o.customer.email || 'No email' }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex flex-wrap gap-2">
-              <a [href]="'tel:' + o.customer.mobile" class="btn-ghost" [class.pointer-events-none]="!o.customer.mobile">
-                <i class="pi pi-phone"></i> Contact Buyer
-              </a>
-              <button (click)="downloadPdf()" class="btn-ghost">
-                <i class="pi pi-download"></i> Download PDF
-              </button>
+              <p class="mt-1.5 text-sm text-surface-500 flex items-center gap-2">
+                <i class="pi pi-calendar text-xs"></i>
+                {{ o.dateCreated | date:'dd MMM yyyy, hh:mm a' }}
+              </p>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 xl:grid-cols-[1fr_360px]">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full lg:w-auto">
+            <button (click)="downloadPdf()" class="btn-ghost justify-center whitespace-nowrap">
+              <i class="pi pi-file-pdf"></i> Download PDF
+            </button>
+            <button (click)="sendWhatsAppWithPdf(o)" [disabled]="!o.customer.mobile || sendingPdf()" class="btn-ghost justify-center whitespace-nowrap text-green-600 disabled:opacity-40">
+              <i [class]="sendingPdf() ? 'pi pi-spin pi-spinner' : 'pi pi-whatsapp'"></i>
+              {{ sendingPdf() ? 'Sending...' : 'WhatsApp' }}
+            </button>
+            <a [href]="'tel:' + o.customer.mobile" class="btn-primary justify-center whitespace-nowrap" [class.pointer-events-none]="!o.customer.mobile">
+              <i class="pi pi-phone"></i> Contact Buyer
+            </a>
+          </div>
+        </div>
+
+        <section class="glass-card-solid p-5 mb-5">
+          <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-surface-200 dark:divide-surface-700">
+            <div class="flex gap-4 pb-5 md:pb-0 md:pr-5">
+              <div class="w-10 h-10 shrink-0 rounded-xl bg-primary-50 dark:bg-primary-900/30 text-primary-600 flex items-center justify-center"><i class="pi pi-clock"></i></div>
+              <div class="min-w-0 flex-1">
+                <p class="text-xs font-semibold text-surface-500 mb-2">Order Status</p>
+                <div class="flex items-center gap-2">
+                  <select [(ngModel)]="selectedStatus" [disabled]="savingStatus()" class="input-field min-w-0 flex-1">
+                    @for (status of statusOptions; track status.value) { <option [value]="status.value">{{ status.label }}</option> }
+                  </select>
+                  <button (click)="saveStatus()" [disabled]="savingStatus() || selectedStatus === o.status" class="btn-primary shrink-0 disabled:opacity-40">
+                    {{ savingStatus() ? 'Saving...' : 'Update' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="flex gap-4 py-5 md:py-0 md:px-5">
+              <div class="w-10 h-10 shrink-0 rounded-xl bg-primary-50 dark:bg-primary-900/30 text-primary-600 flex items-center justify-center"><i class="pi pi-calendar"></i></div>
+              <div><p class="text-xs font-semibold text-surface-500">Order Date</p><p class="mt-2 text-sm font-semibold text-surface-900 dark:text-white">{{ o.dateCreated | date:'dd MMM yyyy, hh:mm a' }}</p></div>
+            </div>
+            <div class="flex gap-4 pt-5 md:pt-0 md:pl-5">
+              <div class="w-10 h-10 shrink-0 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 flex items-center justify-center"><i class="pi pi-user"></i></div>
+              <div class="min-w-0"><p class="text-xs font-semibold text-surface-500">Customer</p><p class="mt-1.5 text-sm font-bold text-green-600">{{ o.customer.mobile || 'No mobile' }}</p><p class="mt-1 text-xs text-surface-500 break-all">{{ o.customer.email || 'No email' }}</p></div>
+            </div>
+          </div>
+        </section>
+
+        <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-5 items-start">
+          <section class="glass-card-solid overflow-hidden">
+            <div class="px-5 py-4 border-b border-surface-200 dark:border-surface-700 flex items-center gap-3">
+              <i class="pi pi-shopping-cart text-primary-600"></i>
+              <h2 class="font-bold text-surface-900 dark:text-white">Order Items ({{ o.products.length }})</h2>
+            </div>
             <div class="overflow-x-auto">
-              <table class="w-full">
-                <thead>
-                  <tr class="border-b border-surface-200 dark:border-surface-700">
-                    <th></th>
-                    <th class="text-left px-5 py-3 text-xs font-semibold text-surface-500 uppercase">Title</th>                    
-                    <th class="text-right px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Price</th>
-                    <th class="text-center px-4 py-3 text-xs font-semibold text-surface-500 uppercase">Qty</th>
-                    <th class="text-right px-5 py-3 text-xs font-semibold text-surface-500 uppercase">Total</th>
+              <table class="w-full min-w-[720px]">
+                <thead class="bg-surface-50 dark:bg-surface-800/70">
+                  <tr>
+                    <th class="w-14 px-4 py-3 text-left text-xs font-semibold text-surface-500">#</th>
+                    <th class="px-3 py-3 text-left text-xs font-semibold text-surface-500 uppercase">Product</th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold text-surface-500 uppercase">Price</th>
+                    <th class="px-4 py-3 text-center text-xs font-semibold text-surface-500 uppercase">Qty</th>
+                    <th class="px-5 py-3 text-right text-xs font-semibold text-surface-500 uppercase">Total</th>
                   </tr>
                 </thead>
-                <tbody>
-                  @for (item of o.products; track item.productId) {
-                    <tr class="border-b border-surface-100 dark:border-surface-800">
-                    <td class="px-5 py-4"> 
-                    <div class="w-14 h-14 rounded-lg bg-surface-100 dark:bg-surface-800 overflow-hidden flex items-center justify-center border border-surface-200 dark:border-surface-700">
-                            @if (item.image) {
-                              <img [src]="item.image" [alt]="item.name" class="w-full h-full object-cover">
-                            } @else {
-                              <i class="pi pi-box text-surface-400"></i>
-                            }
+                <tbody class="divide-y divide-surface-100 dark:divide-surface-800">
+                  @for (item of o.products; track item.productId; let index = $index) {
+                    <tr class="hover:bg-surface-50/80 dark:hover:bg-surface-800/30 transition-colors">
+                      <td class="px-4 py-3 text-sm text-surface-400">{{ index + 1 }}</td>
+                      <td class="px-3 py-3">
+                        <div class="flex items-center gap-3">
+                          <div class="w-12 h-12 shrink-0 rounded-lg bg-surface-100 dark:bg-surface-800 overflow-hidden flex items-center justify-center border border-surface-200 dark:border-surface-700">
+                            @if (item.image) { <img [src]="item.image" [alt]="item.name" class="w-full h-full object-cover"> } @else { <i class="pi pi-box text-surface-400"></i> }
                           </div>
-                    </td>
-                      <td class="px-5 py-4">
-                        <div class="flex items-center gap-3">                          
-                          <div>
-                            <p class="text-sm font-semibold text-surface-900 dark:text-white">{{ item.name }}</p>                            
-                          </div>
+                          <div class="min-w-0"><p class="text-sm font-semibold leading-5 text-surface-900 dark:text-white">{{ item.name }}</p>@if (item.sku) { <p class="mt-1 text-xs text-surface-400">SKU: {{ item.sku }}</p> }</div>
                         </div>
-                      </td>                      
-                      <td class="px-4 py-4 text-sm text-right text-surface-700 dark:text-surface-300">{{ utils.formatCurrency(item.price) }}</td>
-                      <td class="px-4 py-4 text-sm text-center font-semibold text-surface-900 dark:text-white">{{ item.quantity }}</td>
-                      <td class="px-5 py-4 text-sm text-right font-bold text-surface-900 dark:text-white">{{ utils.formatCurrency(item.subtotal) }}</td>
+                      </td>
+                      <td class="px-4 py-3 text-sm text-right text-surface-600 dark:text-surface-300">{{ utils.formatCurrency(item.price) }}</td>
+                      <td class="px-4 py-3 text-sm text-center font-semibold text-surface-900 dark:text-white">{{ item.quantity }}</td>
+                      <td class="px-5 py-3 text-sm text-right font-bold text-surface-900 dark:text-white">{{ utils.formatCurrency(item.subtotal) }}</td>
                     </tr>
                   }
                 </tbody>
               </table>
             </div>
+          </section>
 
-            <aside class="border-t xl:border-t-0 xl:border-l border-surface-200 dark:border-surface-700 p-5 space-y-5 bg-surface-50/70 dark:bg-surface-900/40">
-              <section>
-                <h3 class="text-xs font-semibold uppercase text-surface-400 mb-3">Order Summary</h3>
-                <div class="space-y-2 text-sm">
-                  <div class="flex justify-between"><span class="text-surface-500">Items</span><span>{{ o.products.length }}</span></div>
-                  <div class="flex justify-between"><span class="text-surface-500">Subtotal</span><span>{{ utils.formatCurrency(o.subtotal) }}</span></div>
-                  @if (o.discountTotal) {
-                    <div class="flex justify-between text-green-600"><span>Discount</span><span>-{{ utils.formatCurrency(o.discountTotal) }}</span></div>
-                  }
-                  @if (o.taxTotal) {
-                    <div class="flex justify-between"><span class="text-surface-500">Tax</span><span>{{ utils.formatCurrency(o.taxTotal) }}</span></div>
-                  }
-                  <div class="flex justify-between"><span class="text-surface-500">Shipping</span><span>{{ utils.formatCurrency(o.shippingTotal) }}</span></div>
-                  <div class="flex justify-between pt-3 border-t border-surface-200 dark:border-surface-700 text-lg font-bold">
-                    <span>Total</span><span>{{ utils.formatCurrency(o.total) }}</span>
-                  </div>
-                </div>
-              </section>
+          <aside class="space-y-4">
+            <section class="glass-card-solid overflow-hidden">
+              <div class="px-4 py-3.5 border-b border-surface-200 dark:border-surface-700 flex items-center gap-3"><i class="pi pi-calculator text-primary-600"></i><h3 class="font-bold text-surface-900 dark:text-white">Order Summary</h3></div>
+              <div class="p-4 space-y-2.5 text-sm">
+                <div class="flex justify-between"><span class="text-surface-500">Items</span><span class="font-medium">{{ o.products.length }}</span></div>
+                <div class="flex justify-between"><span class="text-surface-500">Subtotal</span><span class="font-medium">{{ utils.formatCurrency(o.subtotal) }}</span></div>
+                @if (o.discountTotal) { <div class="flex justify-between text-green-600"><span>Discount</span><span>-{{ utils.formatCurrency(o.discountTotal) }}</span></div> }
+                @if (o.taxTotal) { <div class="flex justify-between"><span class="text-surface-500">Tax</span><span>{{ utils.formatCurrency(o.taxTotal) }}</span></div> }
+                <div class="flex justify-between"><span class="text-surface-500">Shipping</span><span class="font-medium">{{ utils.formatCurrency(o.shippingTotal) }}</span></div>
+                <div class="flex justify-between items-center mt-3 p-3 rounded-xl bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"><span class="font-semibold">Total Amount</span><span class="text-xl font-bold">{{ utils.formatCurrency(o.total) }}</span></div>
+              </div>
+            </section>
 
-              <section>
-                <h3 class="text-xs font-semibold uppercase text-surface-400 mb-3">Payment Details</h3>
-                <p class="text-sm font-medium text-surface-900 dark:text-white">{{ o.paymentMethod || 'N/A' }}</p>
-                <p class="text-xs text-surface-400 mt-1">Paid: {{ o.datePaid ? (o.datePaid | date:'dd MMM yyyy, hh:mm a') : 'N/A' }}</p>
-              </section>
+            <section class="glass-card-solid overflow-hidden">
+              <div class="px-4 py-3.5 border-b border-surface-200 dark:border-surface-700 flex items-center gap-3"><i class="pi pi-credit-card text-primary-600"></i><h3 class="font-bold text-surface-900 dark:text-white">Payment Details</h3></div>
+              <div class="p-4 flex gap-3"><div class="w-9 h-9 shrink-0 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 flex items-center justify-center"><i class="pi pi-check"></i></div><div><p class="text-sm font-semibold text-surface-900 dark:text-white">{{ o.paymentMethod || 'N/A' }}</p><p class="text-xs text-surface-400 mt-1">Paid: {{ o.datePaid ? (o.datePaid | date:'dd MMM yyyy, hh:mm a') : 'N/A' }}</p></div></div>
+            </section>
 
-              <section>
-                <h3 class="text-xs font-semibold uppercase text-surface-400 mb-3">Billing Information</h3>
-                <div class="text-sm text-surface-700 dark:text-surface-300 space-y-1">
-                  <p class="font-semibold text-surface-900 dark:text-white">{{ o.billing.firstName }} {{ o.billing.lastName }}</p>
-                  <p>{{ o.billing.mobile || o.customer.mobile }}</p>
-                  <p>{{ o.billing.email || o.customer.email }}</p>
-                  <p>{{ formatAddress(o.billing) }}</p>
-                </div>
-              </section>
+            <section class="glass-card-solid overflow-hidden">
+              <div class="px-4 py-3.5 border-b border-surface-200 dark:border-surface-700 flex items-center gap-3"><i class="pi pi-file text-primary-600"></i><h3 class="font-bold text-surface-900 dark:text-white">Billing Information</h3></div>
+              <div class="p-4 text-sm text-surface-600 dark:text-surface-300 space-y-1"><p class="font-semibold text-surface-900 dark:text-white">{{ o.billing.company || formatRecipient(o.billing) }}</p>@if (o.billing.company) { <p>{{ formatRecipient(o.billing) }}</p> }<p class="leading-5">{{ formatAddress(o.billing) }}</p><p>{{ o.billing.mobile || o.customer.mobile }}</p></div>
+            </section>
 
-              <section>
-                <h3 class="text-xs font-semibold uppercase text-surface-400 mb-3">Shipping Information</h3>
-                <div class="text-sm text-surface-700 dark:text-surface-300 space-y-1">
-                  <p class="font-semibold text-surface-900 dark:text-white">{{ o.shipping.firstName || o.billing.firstName }} {{ o.shipping.lastName || o.billing.lastName }}</p>
-                  <p>{{ formatAddress(o.shipping.address1 ? o.shipping : o.billing) || 'Same as billing' }}</p>
-                </div>
-              </section>
+            <section class="glass-card-solid overflow-hidden">
+              <div class="px-4 py-3.5 border-b border-surface-200 dark:border-surface-700 flex items-center gap-3"><i class="pi pi-truck text-primary-600"></i><h3 class="font-bold text-surface-900 dark:text-white">Shipping Information</h3></div>
+              <div class="p-4 text-sm text-surface-600 dark:text-surface-300 space-y-1"><p class="font-semibold text-surface-900 dark:text-white">{{ shipTo.company || formatRecipient(shipTo) }}</p>@if (shipTo.company) { <p>{{ formatRecipient(shipTo) }}</p> }<p class="leading-5">{{ formatAddress(shipTo) }}</p><p>{{ shipTo.mobile || o.billing.mobile || o.customer.mobile }}</p></div>
+            </section>
+            <section class="glass-card-solid overflow-hidden">
+              <div class="px-4 py-3.5 border-b border-surface-200 dark:border-surface-700 flex items-center gap-3"><i class="pi pi-cog text-primary-600"></i><h3 class="font-bold text-surface-900 dark:text-white">Actions</h3></div>
+              <div class="p-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2 gap-2"><button (click)="downloadPdf()" class="btn-ghost justify-center whitespace-nowrap"><i class="pi pi-download"></i> Download Invoice</button><button (click)="sendWhatsAppWithPdf(o)" [disabled]="!o.customer.mobile || sendingPdf()" class="btn-ghost justify-center whitespace-nowrap text-green-600 disabled:opacity-40"><i class="pi pi-whatsapp"></i> Share on WhatsApp</button></div>
+            </section>
 
-              @if (o.note) {
-                <section>
-                  <h3 class="text-xs font-semibold uppercase text-surface-400 mb-3">Customer Note</h3>
-                  <p class="text-sm text-surface-700 dark:text-surface-300">{{ o.note }}</p>
-                </section>
-              }
-            </aside>
-          </div>
+            @if (o.note) { <section class="glass-card-solid p-4"><h3 class="font-bold text-surface-900 dark:text-white mb-2">Customer Note</h3><p class="text-sm leading-5 text-surface-600 dark:text-surface-300">{{ o.note }}</p></section> }
+          </aside>
         </div>
-        }
+      }
       }
     </div>
   `,
@@ -410,14 +370,42 @@ export class OrderDetailComponent implements OnInit {
     });
   }
 
-  formatAddress(address: any): string {
-    return [
-      address.address1,
-      address.address2,
-      address.city,
-      address.state,
-      address.postcode,
-      address.country,
-    ].filter(Boolean).join(', ');
+  getShippingAddress(order: OrderDetail): Address {
+    const shipping = order.shipping;
+    const hasShippingAddress = Boolean(
+      shipping.address1 || shipping.address2 || shipping.city || shipping.state || shipping.postcode || shipping.country,
+    );
+    return hasShippingAddress ? shipping : order.billing;
+  }
+
+  formatRecipient(address: Address): string {
+    return [address.firstName, address.lastName].filter(Boolean).join(' ') || address.company || 'Guest';
+  }
+
+  formatAddress(address: Address): string {
+    const locality = [address.address1, address.address2, address.city].filter(Boolean).join(', ');
+    const stateAndPostcode = [this.getStateName(address.state), address.postcode].filter(Boolean).join(' - ');
+    return [locality, stateAndPostcode, this.getCountryName(address.country)].filter(Boolean).join(', ');
+  }
+
+  private getCountryName(country: string): string {
+    if (!country) return '';
+    const countries: Record<string, string> = { IN: 'India' };
+    return countries[country.toUpperCase()] || country;
+  }
+
+  private getStateName(state: string): string {
+    if (!state) return '';
+    const indianStates: Record<string, string> = {
+      AP: 'Andhra Pradesh', AR: 'Arunachal Pradesh', AS: 'Assam', BR: 'Bihar', CG: 'Chhattisgarh',
+      GA: 'Goa', GJ: 'Gujarat', HR: 'Haryana', HP: 'Himachal Pradesh', JK: 'Jammu and Kashmir',
+      JH: 'Jharkhand', KA: 'Karnataka', KL: 'Kerala', MP: 'Madhya Pradesh', MH: 'Maharashtra',
+      MN: 'Manipur', ML: 'Meghalaya', MZ: 'Mizoram', NL: 'Nagaland', OD: 'Odisha', OR: 'Odisha',
+      PB: 'Punjab', RJ: 'Rajasthan', SK: 'Sikkim', TN: 'Tamil Nadu', TS: 'Telangana', TR: 'Tripura',
+      UK: 'Uttarakhand', UP: 'Uttar Pradesh', WB: 'West Bengal', AN: 'Andaman and Nicobar Islands',
+      CH: 'Chandigarh', DH: 'Dadra and Nagar Haveli and Daman and Diu', DL: 'Delhi', LA: 'Ladakh',
+      LD: 'Lakshadweep', PY: 'Puducherry',
+    };
+    return indianStates[state.toUpperCase()] || state;
   }
 }

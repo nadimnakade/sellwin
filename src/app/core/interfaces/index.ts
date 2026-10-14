@@ -33,6 +33,7 @@ export interface OrderDetail {
   };
   billing: Address;
   shipping: Address;
+  company:Address;
   products: OrderItem[];
   subtotal: number;
   discountTotal: number;
@@ -43,6 +44,7 @@ export interface OrderDetail {
 }
 
 export interface Address {
+  company: string;
   firstName: string;
   lastName: string;
   mobile: string;

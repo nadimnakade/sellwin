@@ -2,6 +2,8 @@ import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { UpperCasePipe } from '@angular/common';
 import { AuthService } from '../core/services/auth.service';
+import { PwaService } from '../core/services/pwa.service';
+import { AddToHomeScreenComponent } from '../features/pwa/add-to-home-screen.component';
 
 interface NavItem {
   label: string;
@@ -12,7 +14,7 @@ interface NavItem {
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpperCasePipe],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpperCasePipe, AddToHomeScreenComponent],
   template: `
     <div class="flex h-screen overflow-hidden bg-surface-50 dark:bg-surface-950">
       <!-- Sidebar Overlay (mobile only) -->
@@ -74,6 +76,14 @@ interface NavItem {
           </div>
 
           <div class="flex items-center gap-3">
+            @if (pwa.canInstall() && !pwa.isInstalled()) {
+              <button (click)="installApp()"
+                      class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/30 text-xs font-medium transition"
+                      title="Install app">
+                <i class="pi pi-download"></i>
+                Install App
+              </button>
+            }
             <button (click)="auth.toggleDarkMode()"
                     class="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-all">
               @if (auth.isDarkMode()) {
@@ -99,14 +109,22 @@ interface NavItem {
           <router-outlet />
         </main>
       </div>
+
+      <!-- Add to Home Screen Prompt -->
+      <app-add-to-home-screen />
     </div>
   `,
 })
 export class LayoutComponent implements OnInit {
   auth = inject(AuthService);
+  pwa = inject(PwaService);
   sidebarOpen = signal(false);
   isMobile = signal(true);
   currentTime = '';
+
+  async installApp(): Promise<void> {
+    await this.pwa.install();
+  }
 
   sidebarWidth = computed(() => {
     if (this.isMobile()) return '256px';
