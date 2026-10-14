@@ -33,7 +33,6 @@ export interface OrderDetail {
   };
   billing: Address;
   shipping: Address;
-  company:Address;
   products: OrderItem[];
   subtotal: number;
   discountTotal: number;
