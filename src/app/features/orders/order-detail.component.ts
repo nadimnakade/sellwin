@@ -16,7 +16,7 @@ import { Address, OrderDetail, OrderItem } from '../../core/interfaces';
   providers: [MessageService],
   template: `
     <p-toast />
-    <div class="page-container">
+    <div class="w-full p-3 sm:p-5 lg:p-6 animate-fade-in">
       @if (loading()) {
         <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-5">
           <div class="glass-card p-6 space-y-4">
@@ -88,7 +88,7 @@ import { Address, OrderDetail, OrderItem } from '../../core/interfaces';
           </div>
         </section>
 
-        <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-5 items-start">
+        <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-5 items-start">
           <section class="glass-card-solid overflow-hidden">
             <div class="px-5 py-4 border-b border-surface-200 dark:border-surface-700 flex items-center gap-3">
               <i class="pi pi-shopping-cart text-primary-600"></i>
@@ -144,11 +144,17 @@ import { Address, OrderDetail, OrderItem } from '../../core/interfaces';
               <div class="p-4 flex gap-3"><div class="w-9 h-9 shrink-0 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 flex items-center justify-center"><i class="pi pi-check"></i></div><div><p class="text-sm font-semibold text-surface-900 dark:text-white">{{ o.paymentMethod || 'N/A' }}</p><p class="text-xs text-surface-400 mt-1">Paid: {{ o.datePaid ? (o.datePaid | date:'dd MMM yyyy, hh:mm a') : 'N/A' }}</p></div></div>
             </section>
             <section class="glass-card-solid overflow-hidden">
-              <div class="px-4 py-3.5 border-b border-surface-200 dark:border-surface-700 flex items-center gap-3"><i class="pi pi-file text-primary-600"></i><h3 class="font-bold text-surface-900 dark:text-white">Billing Information</h3></div>
+              <div class="px-4 py-3.5 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3"><i class="pi pi-file text-primary-600"></i><h3 class="font-bold text-surface-900 dark:text-white">Billing Information</h3></div>
+                <button type="button" (click)="copyAddress(o.billing, o.customer.mobile, 'Billing')" class="w-8 h-8 shrink-0 rounded-lg text-surface-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 flex items-center justify-center active:scale-[0.96]" title="Copy billing address" aria-label="Copy billing address"><i class="pi pi-copy text-sm"></i></button>
+              </div>
               <div class="p-4 text-sm text-surface-600 dark:text-surface-300 space-y-1"><p class="font-semibold text-surface-900 dark:text-white">{{ o.billing.company || formatRecipient(o.billing) }}</p>@if (o.billing.company) { <p>{{ formatRecipient(o.billing) }}</p> }<p class="leading-5">{{ formatAddress(o.billing) }}</p><p>{{ o.billing.mobile || o.customer.mobile }}</p></div>
             </section>
             <section class="glass-card-solid overflow-hidden">
-              <div class="px-4 py-3.5 border-b border-surface-200 dark:border-surface-700 flex items-center gap-3"><i class="pi pi-truck text-primary-600"></i><h3 class="font-bold text-surface-900 dark:text-white">Shipping Information</h3></div>
+              <div class="px-4 py-3.5 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3"><i class="pi pi-truck text-primary-600"></i><h3 class="font-bold text-surface-900 dark:text-white">Shipping Information</h3></div>
+                <button type="button" (click)="copyAddress(shipTo, o.billing.mobile || o.customer.mobile, 'Shipping')" class="w-8 h-8 shrink-0 rounded-lg text-surface-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 flex items-center justify-center active:scale-[0.96]" title="Copy shipping address" aria-label="Copy shipping address"><i class="pi pi-copy text-sm"></i></button>
+              </div>
               <div class="p-4 text-sm text-surface-600 dark:text-surface-300 space-y-1"><p class="font-semibold text-surface-900 dark:text-white">{{ shipTo.company || formatRecipient(shipTo) }}</p>@if (shipTo.company) { <p>{{ formatRecipient(shipTo) }}</p> }<p class="leading-5">{{ formatAddress(shipTo) }}</p><p>{{ shipTo.mobile || o.billing.mobile || o.customer.mobile }}</p></div>
             </section>
             <section class="glass-card-solid overflow-hidden">
@@ -384,6 +390,30 @@ export class OrderDetailComponent implements OnInit {
     return [locality, stateAndPostcode, this.getCountryName(address.country)].filter(Boolean).join(', ');
   }
 
+  async copyAddress(address: Address, fallbackMobile: string, label: string): Promise<void> {
+    const recipient = formatAddressLines(address, fallbackMobile, this.formatRecipient(address), this.formatAddress(address));
+
+    try {
+      await navigator.clipboard.writeText(recipient);
+      this.toast.add({ severity: 'success', summary: 'Copied', detail: `${label} address copied`, life: 2500 });
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = recipient;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const copied = document.execCommand('copy');
+      textarea.remove();
+      this.toast.add({
+        severity: copied ? 'success' : 'error',
+        summary: copied ? 'Copied' : 'Copy failed',
+        detail: copied ? `${label} address copied` : 'Please copy the address manually',
+        life: 3000,
+      });
+    }
+  }
+
   private getCountryName(country: string): string {
     if (!country) return '';
     const countries: Record<string, string> = { IN: 'India' };
@@ -404,4 +434,13 @@ export class OrderDetailComponent implements OnInit {
     };
     return indianStates[state.toUpperCase()] || state;
   }
+}
+
+function formatAddressLines(address: Address, fallbackMobile: string, recipient: string, formattedAddress: string): string {
+  return [
+    address.company,
+    recipient !== address.company ? recipient : '',
+    formattedAddress,
+    address.mobile || fallbackMobile,
+  ].filter(Boolean).join('\n');
 }
