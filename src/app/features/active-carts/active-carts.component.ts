@@ -157,12 +157,9 @@ export class ActiveCartsComponent implements OnInit {
     const filename = `Cart-Invoice-A${cart.id}.pdf`;
     const file = new File([blob], filename, { type: 'application/pdf' });
 
-    if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+    if (this.utils.canShareFile(file)) {
       try {
-        await navigator.share({
-          files: [file],
-          text: `Hi ${cart.name || 'there'}, here is your Sellwin cart invoice.`,
-        });
+        await this.utils.shareFile(file, `Hi ${cart.name || 'there'}, here is your Sellwin cart invoice.`);
         this.sendingPdfId.set(null);
         return;
       } catch (e) {

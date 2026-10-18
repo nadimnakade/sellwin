@@ -612,12 +612,9 @@ viewCart(cart: CartBountyCart): void {
     const filename = `Cart-Invoice-C${cart.id}.pdf`;
     const file = new File([blob], filename, { type: 'application/pdf' });
 
-    if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+    if (this.utils.canShareFile(file)) {
       try {
-        await navigator.share({
-          files: [file],
-          text: `Hi ${this.getFullName(cart)}, here is your Sellwin cart invoice.`,
-        });
+        await this.utils.shareFile(file, `Hi ${this.getFullName(cart)}, here is your Sellwin cart invoice.`);
         this.sendingPdfId.set(null);
         this.trackWhatsApp(cart.id);
         return;

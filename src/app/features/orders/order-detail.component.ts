@@ -348,12 +348,9 @@ export class OrderDetailComponent implements OnInit {
     const file = new File([blob], filename, { type: 'application/pdf' });
 
     // Try native share with file (mobile → WhatsApp receives PDF as attachment)
-    if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+    if (this.utils.canShareFile(file)) {
       try {
-        await navigator.share({
-          files: [file],
-          text: `Hello ${order.customer.name}, here is your Sellwin order #${order.orderNumber} invoice.`,
-        });
+        await this.utils.shareFile(file, `Hello ${order.customer.name}, here is your Sellwin order #${order.orderNumber} invoice.`);
         this.sendingPdf.set(false);
         return;
       } catch (e) {

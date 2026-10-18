@@ -22,6 +22,22 @@ export class UtilsService {
     window.open(this.getWhatsAppUrl(mobile, message), '_blank');
   }
 
+  canShareFile(file: File): boolean {
+    return typeof navigator.share === 'function'
+      && typeof navigator.canShare === 'function'
+      && navigator.canShare({ files: [file] });
+  }
+
+  async shareFile(file: File, text: string): Promise<void> {
+    // iOS/iPadOS Safari can pass its temporary blob URL to WhatsApp when text
+    // and a file are shared together. A files-only payload sends the real PDF.
+    const isAppleMobile = /iPad|iPhone|iPod/.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const shareData: ShareData = { files: [file] };
+    if (!isAppleMobile) shareData.text = text;
+    await navigator.share(shareData);
+  }
+
   exportToCsv(data: any[], filename: string): void {
     if (!data.length) return;
 

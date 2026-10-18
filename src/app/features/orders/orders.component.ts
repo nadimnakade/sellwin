@@ -351,12 +351,9 @@ export class OrdersComponent implements OnInit {
         const filename = `Order-Invoice-${detail.orderNumber}.pdf`;
         const file = new File([blob], filename, { type: 'application/pdf' });
 
-        if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+        if (this.utils.canShareFile(file)) {
           try {
-            await navigator.share({
-              files: [file],
-              text: `Hello ${detail.customer.name}, here is your Sellwin order #${detail.orderNumber} invoice.`,
-            });
+            await this.utils.shareFile(file, `Hello ${detail.customer.name}, here is your Sellwin order #${detail.orderNumber} invoice.`);
             this.sendingPdfId.set(null);
             return;
           } catch (e) {

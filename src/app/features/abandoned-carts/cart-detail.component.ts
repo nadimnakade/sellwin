@@ -360,12 +360,9 @@ export class CartDetailComponent implements OnInit {
     const file = new File([blob], filename, { type: 'application/pdf' });
 
     // Try native share with file (mobile → WhatsApp receives PDF as attachment)
-    if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+    if (this.utils.canShareFile(file)) {
       try {
-        await navigator.share({
-          files: [file],
-          text: `Hi ${c.customer.name}, here is your Sellwin cart invoice.`,
-        });
+        await this.utils.shareFile(file, `Hi ${c.customer.name}, here is your Sellwin cart invoice.`);
         this.sendingPdf.set(false);
         this.api.markWhatsAppContacted(c.id).subscribe();
         return;
