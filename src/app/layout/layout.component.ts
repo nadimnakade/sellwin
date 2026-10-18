@@ -4,6 +4,7 @@ import { UpperCasePipe } from '@angular/common';
 import { AuthService } from '../core/services/auth.service';
 import { PwaService } from '../core/services/pwa.service';
 import { AddToHomeScreenComponent } from '../features/pwa/add-to-home-screen.component';
+import { SELLWIN_LOGO_URL } from '../core/constants/sellwin-logo';
 
 interface NavItem {
   label: string;
@@ -33,9 +34,7 @@ interface NavItem {
              [class.translate-x-0]="sidebarOpen() && isMobile()">
         <!-- Logo -->
         <div class="flex items-center gap-3 px-6 h-16 border-b border-surface-200 dark:border-surface-800 min-w-[256px]">
-          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
-            <span class="text-white font-bold text-sm">S</span>
-          </div>
+          <img [src]="logoUrl" alt="Sellwin logo" class="w-9 h-9 rounded-lg object-contain" />
           <span class="font-bold text-lg text-surface-900 dark:text-white">Sellwin</span>
         </div>
 
@@ -116,6 +115,7 @@ interface NavItem {
   `,
 })
 export class LayoutComponent implements OnInit {
+  readonly logoUrl = SELLWIN_LOGO_URL;
   auth = inject(AuthService);
   pwa = inject(PwaService);
   sidebarOpen = signal(false);

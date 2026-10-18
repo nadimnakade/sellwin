@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import jsPDF from 'jspdf';
 import { OrderDetail, OrderItem } from '../interfaces';
+import { SELLWIN_LOGO_URL } from '../constants/sellwin-logo';
 
 type PdfColor = [number, number, number];
 
@@ -19,14 +20,12 @@ export interface PdfConfig {
 }
 
 export function buildPdfAddresses(order: OrderDetail): { label: string; lines: string[] }[] {
-  const toLines = (address: OrderDetail['billing']): string[] => [
-    address.company,
-    [address.firstName, address.lastName].filter(Boolean).join(' '),
-    address.address1,
-    address.address2,
-    [address.city, address.state, address.postcode].filter(Boolean).join(', '),
-    address.country,
-  ].filter(Boolean);
+  const toLines = (address: OrderDetail['billing']): string[] => {
+    const recipient = [address.firstName, address.lastName].filter(Boolean).join(' ');
+    const street = [address.address1, address.address2].filter(Boolean).join(', ');
+    const locality = [address.city, address.state, address.postcode, address.country].filter(Boolean).join(', ');
+    return [address.company, recipient, street, locality].filter(Boolean);
+  };
   const blocks = [{ label: 'BILL TO', lines: toLines(order.billing) }];
   const shippingLines = toLines(order.shipping);
   if (shippingLines.length) blocks.push({ label: 'SHIP TO', lines: shippingLines });
@@ -35,6 +34,7 @@ export function buildPdfAddresses(order: OrderDetail): { label: string; lines: s
 
 @Injectable({ providedIn: 'root' })
 export class PdfService {
+  private logoDataUrl = '';
   private readonly font = 'helvetica';
   private readonly ink: PdfColor = [15, 23, 42];
   private readonly slate: PdfColor = [71, 85, 105];
@@ -42,6 +42,12 @@ export class PdfService {
   private readonly line: PdfColor = [226, 232, 240];
   private readonly surface: PdfColor = [248, 250, 252];
   private readonly primary: PdfColor = [37, 99, 235];
+
+  constructor() {
+    // Start caching the logo as soon as the PDF service is created so synchronous
+    // blob generation can include it after the initial application load.
+    void this.ensureLogoLoaded();
+  }
 
   private buildPdf(config: PdfConfig): jsPDF {
     const pdf = new jsPDF('p', 'mm', 'a4');
@@ -61,16 +67,20 @@ export class PdfService {
     const totalQuantity = config.products.reduce((sum, product) => sum + Number(product.quantity || 0), 0);
     const setFont = (style: 'normal' | 'bold' | 'italic', size: number, color: PdfColor): void => {
       pdf.setFont(this.font, style);
-      pdf.setFontSize(size);
+      pdf.setFontSize(size + 0.5);
       pdf.setTextColor(...color);
     };
 
     const drawBrand = (compact = false): void => {
       const markSize = compact ? 9 : 13;
-      pdf.setFillColor(...this.primary);
-      pdf.roundedRect(margin, y, markSize, markSize, 2.5, 2.5, 'F');
-      setFont('bold', compact ? 8 : 11, [255, 255, 255]);
-      pdf.text('S', margin + markSize / 2, y + markSize * 0.69, { align: 'center' });
+      if (this.logoDataUrl) {
+        pdf.addImage(this.logoDataUrl, 'PNG', margin, y, markSize, markSize, undefined, 'FAST');
+      } else {
+        pdf.setFillColor(...this.primary);
+        pdf.roundedRect(margin, y, markSize, markSize, 2.5, 2.5, 'F');
+        setFont('bold', compact ? 8 : 11, [255, 255, 255]);
+        pdf.text('S', margin + markSize / 2, y + markSize * 0.69, { align: 'center' });
+      }
       setFont('bold', compact ? 13 : 20, this.ink);
       pdf.text('SELLWIN', margin + markSize + 4, y + (compact ? 6.5 : 7.5));
       if (!compact) {
@@ -111,7 +121,9 @@ export class PdfService {
       });
       const gap = 4;
       const width = (contentWidth - gap * (cards.length - 1)) / cards.length;
-      const height = Math.max(30, ...cards.map((card) => 14 + Math.min(card.lines.length, 4) * 4.3));
+      // Address lines may wrap inside narrow three-column cards, so reserve enough
+      // vertical space to keep the complete Bill To and Ship To addresses visible.
+      const height = cards.length > 1 ? 46 : 34;
       cards.forEach((card, index) => {
         const x = margin + index * (width + gap);
         pdf.setFillColor(...this.surface);
@@ -170,23 +182,24 @@ export class PdfService {
     };
 
     const addProductImage = (item: OrderItem, index: number, rowY: number): void => {
+      const imageSize = 17;
       const image = item.imageBase64 || (item.image?.startsWith('data:image/') ? item.image : '');
       if (image) {
         try {
           const format = image.startsWith('data:image/png') ? 'PNG' : image.startsWith('data:image/webp') ? 'WEBP' : 'JPEG';
-          pdf.addImage(image, format, margin + 13, rowY + 3, 13, 13, undefined, 'FAST');
+          pdf.addImage(image, format, margin + 13, rowY + 3, imageSize, imageSize, undefined, 'FAST');
           return;
         } catch { /* Fall through to placeholder. */ }
       }
       pdf.setFillColor(226, 232, 240);
-      pdf.roundedRect(margin + 13, rowY + 3, 13, 13, 2, 2, 'F');
+      pdf.roundedRect(margin + 13, rowY + 3, imageSize, imageSize, 2, 2, 'F');
       setFont('bold', 7.5, this.slate);
-      pdf.text(String(index + 1), margin + 19.5, rowY + 10.8, { align: 'center' });
+      pdf.text(String(index + 1), margin + 21.5, rowY + 12.8, { align: 'center' });
     };
 
     const drawProductRow = (item: OrderItem, index: number): void => {
-      const nameLines = pdf.splitTextToSize(item.name || 'Unnamed product', 75).slice(0, 2);
-      const rowHeight = Math.max(19, 8 + nameLines.length * 4.2);
+      const nameLines = pdf.splitTextToSize(item.name || 'Unnamed product', 71).slice(0, 2);
+      const rowHeight = Math.max(23, 8 + nameLines.length * 4.2);
       if (y + rowHeight > footerTop - 5) {
         pdf.addPage();
         drawContinuationHeader();
@@ -198,18 +211,18 @@ export class PdfService {
       }
       addProductImage(item, index, y);
       setFont('normal', 7.5, this.slate);
-      pdf.text(String(index + 1), margin + 4.5, y + 10.5, { align: 'center' });
+      pdf.text(String(index + 1), margin + 4.5, y + 12.5, { align: 'center' });
       setFont('bold', 8.5, this.ink);
-      pdf.text(nameLines, margin + 30, y + 7);
+      pdf.text(nameLines, margin + 34, y + 8);
       if (item.sku) {
         setFont('normal', 7, this.muted);
-        pdf.text(`SKU: ${item.sku}`, margin + 30, y + 7 + nameLines.length * 4.2);
+        pdf.text(`SKU: ${item.sku}`, margin + 34, y + 8 + nameLines.length * 4.2);
       }
       setFont('normal', 8, this.slate);
-      pdf.text(formatPrice(item.price), margin + 128, y + 10.5, { align: 'right' });
+      pdf.text(formatPrice(item.price), margin + 128, y + 12.5, { align: 'right' });
       setFont('bold', 8.5, this.ink);
-      pdf.text(String(item.quantity), margin + 148, y + 10.5, { align: 'center' });
-      pdf.text(formatPrice(item.subtotal || item.price * item.quantity), pageWidth - margin - 3, y + 10.5, { align: 'right' });
+      pdf.text(String(item.quantity), margin + 148, y + 12.5, { align: 'center' });
+      pdf.text(formatPrice(item.subtotal || item.price * item.quantity), pageWidth - margin - 3, y + 12.5, { align: 'right' });
       pdf.setDrawColor(...this.line);
       pdf.line(margin, y + rowHeight, pageWidth - margin, y + rowHeight);
       y += rowHeight;
@@ -283,6 +296,28 @@ export class PdfService {
     return pdf;
   }
 
-  generate(config: PdfConfig): void { this.buildPdf(config).save(config.filename); }
-  generateBlob(config: PdfConfig): Blob { return this.buildPdf(config).output('blob'); }
+  generate(config: PdfConfig): void {
+    void this.ensureLogoLoaded().then(() => this.buildPdf(config).save(config.filename));
+  }
+
+  generateBlob(config: PdfConfig): Blob {
+    return this.buildPdf(config).output('blob');
+  }
+
+  private async ensureLogoLoaded(): Promise<void> {
+    if (this.logoDataUrl) return;
+    try {
+      const response = await fetch(SELLWIN_LOGO_URL);
+      if (!response.ok) return;
+      const blob = await response.blob();
+      this.logoDataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      // Keep the built-in fallback mark if the remote logo is unavailable.
+    }
+  }
 }

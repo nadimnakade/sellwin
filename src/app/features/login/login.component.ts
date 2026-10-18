@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { SELLWIN_LOGO_URL } from '../../core/constants/sellwin-logo';
 
 @Component({
   selector: 'app-login',
@@ -9,9 +10,7 @@ import { AuthService } from '../../core/services/auth.service';
     <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-50 to-surface-100 dark:from-surface-950 dark:to-surface-900 p-4">
       <div class="w-full max-w-md animate-slide-up">
         <div class="text-center mb-8">
-          <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary-500/20">
-            <span class="text-white font-bold text-2xl">S</span>
-          </div>
+          <img [src]="logoUrl" alt="Sellwin logo" class="w-16 h-16 rounded-2xl object-contain mx-auto mb-4 shadow-lg shadow-primary-500/20" />
           <h1 class="text-2xl font-bold text-surface-900 dark:text-white">Sellwin Admin</h1>
           <p class="text-surface-500 mt-1">WooCommerce Dashboard</p>
         </div>
@@ -47,6 +46,7 @@ import { AuthService } from '../../core/services/auth.service';
   `,
 })
 export class LoginComponent {
+  readonly logoUrl = SELLWIN_LOGO_URL;
   private auth = inject(AuthService);
   private router = inject(Router);
 
