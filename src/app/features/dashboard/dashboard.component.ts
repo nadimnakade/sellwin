@@ -32,7 +32,7 @@ import { DashboardStats, RevenueTrend, OrdersTrend, AbandonedTrend, TopProduct, 
       } @else {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           <!-- Revenue Today -->
-          <div class="stat-card-gradient stat-card-teal">
+          <a routerLink="/orders" aria-label="View orders and revenue" class="stat-card-gradient stat-card-teal block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-surface-950">
             <div class="flex items-center justify-between mb-2">
               <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
@@ -54,10 +54,10 @@ import { DashboardStats, RevenueTrend, OrdersTrend, AbandonedTrend, TopProduct, 
                 <rect x="32" y="36" width="16" height="20" rx="3" opacity="0.6"/>
               </svg>
             </div>
-          </div>
+          </a>
 
           <!-- Orders Today -->
-          <div class="stat-card-gradient stat-card-amber">
+          <a routerLink="/orders" aria-label="View today's orders" class="stat-card-gradient stat-card-amber block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-surface-950">
             <div class="flex items-center justify-between mb-2">
               <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
@@ -79,10 +79,10 @@ import { DashboardStats, RevenueTrend, OrdersTrend, AbandonedTrend, TopProduct, 
                 <path d="M8 40l28 12-2-20L8 40z" fill="white" opacity="0.2"/>
               </svg>
             </div>
-          </div>
+          </a>
 
           <!-- Active Carts -->
-          <div class="stat-card-gradient stat-card-blue">
+          <a routerLink="/active-carts" aria-label="View active carts" class="stat-card-gradient stat-card-blue block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-surface-950">
             <div class="flex items-center justify-between mb-2">
               <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-sky-500/20 flex items-center justify-center">
@@ -105,10 +105,10 @@ import { DashboardStats, RevenueTrend, OrdersTrend, AbandonedTrend, TopProduct, 
                 <rect x="64" y="10" width="12" height="62" rx="2"/>
               </svg>
             </div>
-          </div>
+          </a>
 
           <!-- Latest Cart Changes -->
-          <div class="stat-card-gradient stat-card-red">
+          <a routerLink="/latest-carts" aria-label="View latest cart changes" class="stat-card-gradient stat-card-red block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-surface-950">
             <div class="flex items-center justify-between mb-2">
               <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
@@ -131,7 +131,7 @@ import { DashboardStats, RevenueTrend, OrdersTrend, AbandonedTrend, TopProduct, 
                 <path d="M56 54l8 8M64 54l-8 8" stroke="white" stroke-width="2" stroke-linecap="round"/>
               </svg>
             </div>
-          </div>
+          </a>
         </div>
       }
 
