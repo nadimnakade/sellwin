@@ -6,7 +6,7 @@ import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { ApiService } from '../../core/services/api.service';
 import { UtilsService } from '../../core/services/utils.service';
-import { PdfService, PdfConfig } from '../../core/services/pdf.service';
+import { PdfService, PdfConfig, buildPdfAddresses } from '../../core/services/pdf.service';
 import { Address, OrderDetail, OrderItem } from '../../core/interfaces';
 
 @Component({
@@ -83,7 +83,7 @@ import { Address, OrderDetail, OrderItem } from '../../core/interfaces';
             </div>
             <div class="flex gap-4 pt-5 md:pt-0 md:pl-5">
               <div class="w-10 h-10 shrink-0 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 flex items-center justify-center"><i class="pi pi-user"></i></div>
-              <div class="min-w-0"><p class="text-xs font-semibold text-surface-500">Customer</p><p class="mt-1.5 text-sm font-bold text-green-600">{{ o.customer.mobile || 'No mobile' }}</p><p class="mt-1 text-xs text-surface-500 break-all">{{ o.customer.email || 'No email' }}</p></div>
+              <div class="min-w-0"><p class="text-xs font-semibold text-surface-500">Customer</p>@if (o.customer.mobile) { <a [routerLink]="['/customers', customerRouteMobile(o.customer.mobile)]" class="mt-1.5 inline-block text-sm font-bold text-green-600 hover:underline">{{ o.customer.mobile }}</a> } @else { <p class="mt-1.5 text-sm font-bold text-surface-500">No mobile</p> }<p class="mt-1 text-xs text-surface-500 break-all">{{ o.customer.email || 'No email' }}</p></div>
             </div>
           </div>
         </section>
@@ -182,6 +182,10 @@ export class OrderDetailComponent implements OnInit {
   order = signal<OrderDetail | null>(null);
   selectedStatus = '';
 
+  customerRouteMobile(mobile: string): string {
+    return mobile.replace(/[^0-9]/g, '');
+  }
+
   statusOptions = [
     { value: 'pending', label: 'Pending payment' },
     { value: 'processing', label: 'Processing' },
@@ -258,6 +262,8 @@ export class OrderDetailComponent implements OnInit {
       products: order.products,
       orderInfo,
       summaryLines,
+      addresses: buildPdfAddresses(order),
+      note: order.note,
       filename: `Order-Invoice-${order.orderNumber}.pdf`,
     });
   }
@@ -332,6 +338,8 @@ export class OrderDetailComponent implements OnInit {
       products: order.products,
       orderInfo,
       summaryLines,
+      addresses: buildPdfAddresses(order),
+      note: order.note,
       filename: `Order-Invoice-${order.orderNumber}.pdf`,
     };
 

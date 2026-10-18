@@ -1,5 +1,6 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { UtilsService } from '../../core/services/utils.service';
 import { CustomerHistory } from '../../core/interfaces';
@@ -7,14 +8,19 @@ import { CustomerHistory } from '../../core/interfaces';
 @Component({
   selector: 'app-customers',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, RouterLink],
   template: `
     <div class="page-container">
-      <div class="page-header">
+      <div class="page-header gap-4">
         <div>
           <h1 class="page-title">Customers</h1>
-          <p class="text-surface-500 mt-1">Search and view customer details by mobile number</p>
+          <p class="text-surface-500 mt-1">Customer profile, order history and cart activity</p>
         </div>
+        @if (customer(); as c) {
+          <div class="flex items-center gap-2">
+            @if (c.mobile) { <a [href]="'tel:' + c.mobile" class="btn-ghost"><i class="pi pi-phone"></i> Call</a><button type="button" (click)="openWhatsApp(c.mobile, c.name)" class="btn-primary bg-green-600 hover:bg-green-700"><i class="pi pi-whatsapp"></i> WhatsApp</button> }
+          </div>
+        }
       </div>
       <div class="glass-card p-6 mb-6">
         <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Search by Mobile Number</label>
@@ -23,6 +29,7 @@ import { CustomerHistory } from '../../core/interfaces';
             <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400"></i>
             <input type="tel" #mobileInput
                    (keyup.enter)="search(mobileInput.value)"
+                   [value]="currentMobile()"
                    placeholder="Enter 10-digit mobile number"
                    class="input-field pl-9"
                    maxlength="15">
@@ -49,6 +56,7 @@ import { CustomerHistory } from '../../core/interfaces';
               <span class="text-sm text-surface-500">Customer</span>
               <p class="text-xl font-bold text-surface-900 dark:text-white mt-1">{{ c.name || 'Unknown' }}</p>
               <p class="text-sm text-surface-400">{{ c.mobile }}</p>
+              @if (c.email) { <p class="text-xs text-surface-400 mt-1 break-all">{{ c.email }}</p> }
             </div>
             <div class="stat-card">
               <span class="text-sm text-surface-500">Lifetime Value</span>
@@ -82,7 +90,7 @@ import { CustomerHistory } from '../../core/interfaces';
                   <tbody>
                     @for (order of c.orders; track order.id) {
                       <tr class="border-b border-surface-100 dark:border-surface-800">
-                        <td class="px-4 py-3 text-sm font-medium text-surface-900 dark:text-white">#{{ order.id }}</td>
+                        <td class="px-4 py-3 text-sm font-medium"><a [routerLink]="['/orders', order.id]" class="text-primary-600 hover:underline">#{{ order.id }}</a></td>
                         <td class="px-4 py-3 text-sm text-right font-semibold text-surface-900 dark:text-white">{{ utils.formatCurrency(order.total) }}</td>
                         <td class="px-4 py-3"><span [class]="utils.getStatusClass(order.status)">{{ utils.getStatusLabel(order.status) }}</span></td>
                         <td class="px-4 py-3 text-sm text-right text-surface-500">{{ order.date | date:'dd MMM yyyy' }}</td>
@@ -114,7 +122,7 @@ import { CustomerHistory } from '../../core/interfaces';
                   <tbody>
                     @for (cart of c.carts; track cart.id) {
                       <tr class="border-b border-surface-100 dark:border-surface-800">
-                        <td class="px-4 py-3"><span [class]="utils.getStatusClass(cart.status)">{{ utils.getStatusLabel(cart.status) }}</span></td>
+                        <td class="px-4 py-3"><a [routerLink]="['/latest-carts', cart.id]" class="inline-flex hover:opacity-80"><span [class]="utils.getStatusClass(cart.status)">{{ utils.getStatusLabel(cart.status) }}</span></a></td>
                         <td class="px-4 py-3 text-sm text-center text-surface-700 dark:text-surface-300">{{ cart.product_count }}</td>
                         <td class="px-4 py-3 text-sm text-right font-semibold text-surface-900 dark:text-white">{{ utils.formatCurrency(cart.cart_value) }}</td>
                         <td class="px-4 py-3 text-sm text-right text-surface-500">{{ cart.last_activity | date:'dd MMM, hh:mm a' }}</td>
@@ -138,14 +146,25 @@ import { CustomerHistory } from '../../core/interfaces';
     </div>
   `,
 })
-export class CustomersComponent {
+export class CustomersComponent implements OnInit {
   private api = inject(ApiService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
   utils = inject(UtilsService);
 
   loading = signal(false);
   customer = signal<CustomerHistory | null>(null);
   error = signal('');
   searched = signal(false);
+  currentMobile = signal('');
+
+  ngOnInit(): void {
+    this.route.paramMap.subscribe((params) => {
+      const mobile = params.get('mobile') || '';
+      this.currentMobile.set(mobile);
+      if (mobile) this.loadCustomer(mobile);
+    });
+  }
 
   search(mobile: string): void {
     const clean = mobile.replace(/[^0-9]/g, '');
@@ -153,12 +172,20 @@ export class CustomersComponent {
       this.error.set('Please enter a valid mobile number (min 10 digits)');
       return;
     }
+    this.router.navigate(['/customers', clean]);
+  }
+
+  openWhatsApp(mobile: string, name: string): void {
+    this.utils.openWhatsApp(mobile, `Hi ${name || 'there'}, this is Sellwin support. How can we help you?`);
+  }
+
+  private loadCustomer(mobile: string): void {
     this.error.set('');
     this.loading.set(true);
     this.searched.set(true);
     this.customer.set(null);
 
-    this.api.getCustomer(clean).subscribe({
+    this.api.getCustomer(mobile).subscribe({
       next: (res) => { this.customer.set(res); this.loading.set(false); },
       error: (err) => {
         this.customer.set(null);

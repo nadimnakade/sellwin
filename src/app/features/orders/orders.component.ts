@@ -5,7 +5,7 @@ import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { ApiService } from '../../core/services/api.service';
 import { UtilsService } from '../../core/services/utils.service';
-import { PdfService, PdfConfig } from '../../core/services/pdf.service';
+import { PdfService, PdfConfig, buildPdfAddresses } from '../../core/services/pdf.service';
 import { Order } from '../../core/interfaces';
 
 @Component({
@@ -117,7 +117,7 @@ import { Order } from '../../core/interfaces';
                 @for (order of orders(); track order.id) {
                   <tr class="border-b border-surface-100 dark:border-surface-800 hover:bg-surface-50 dark:hover:bg-surface-800/30 transition">
                     <td class="px-4 py-3 text-sm font-medium text-surface-900 dark:text-white">#{{ order.orderNumber }}</td>
-                    <td class="px-4 py-3 text-sm text-surface-700 dark:text-surface-300">{{ order.customerName }}</td>
+                    <td class="px-4 py-3 text-sm">@if (order.mobile) { <a [routerLink]="['/customers', customerRouteMobile(order.mobile)]" class="text-primary-600 hover:underline">{{ order.customerName }}</a> } @else { <span class="text-surface-700 dark:text-surface-300">{{ order.customerName }}</span> }</td>
                     <td class="px-4 py-3 text-sm text-surface-600 dark:text-surface-400">{{ utils.formatIndianMobile(order.mobile) }}</td>
                     <td class="px-4 py-3 text-sm font-semibold text-surface-900 dark:text-white">{{ utils.formatCurrency(order.total) }}</td>
                     <td class="px-4 py-3"><span [class]="utils.getStatusClass(order.status)">{{ utils.getStatusLabel(order.status) }}</span></td>
@@ -155,7 +155,7 @@ import { Order } from '../../core/interfaces';
                   <span [class]="utils.getStatusClass(order.status)">{{ utils.getStatusLabel(order.status) }}</span>
                 </div>
                 <!-- Customer + Mobile -->
-                <div class="text-sm text-surface-700 dark:text-surface-300 mb-1">{{ order.customerName }}</div>
+                <div class="text-sm mb-1">@if (order.mobile) { <a [routerLink]="['/customers', customerRouteMobile(order.mobile)]" class="text-primary-600 hover:underline">{{ order.customerName }}</a> } @else { <span class="text-surface-700 dark:text-surface-300">{{ order.customerName }}</span> }</div>
                 <div class="text-xs text-surface-500 mb-3">{{ utils.formatIndianMobile(order.mobile) || '—' }}</div>
                 <!-- Bottom: Amount + Date + Actions -->
                 <div class="flex items-center justify-between">
@@ -220,6 +220,10 @@ export class OrdersComponent implements OnInit {
 
   loading = signal(true);
   sendingPdfId = signal<number | null>(null);
+
+  customerRouteMobile(mobile: string): string {
+    return mobile.replace(/[^0-9]/g, '');
+  }
   orders = signal<Order[]>([]);
   totalOrders = signal(0);
   currentPage = signal(1);
@@ -338,6 +342,8 @@ export class OrdersComponent implements OnInit {
           products: detail.products,
           orderInfo,
           summaryLines,
+          addresses: buildPdfAddresses(detail),
+          note: detail.note,
           filename: `Order-Invoice-${detail.orderNumber}.pdf`,
         };
 

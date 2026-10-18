@@ -1,11 +1,11 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, of, throwError, map, catchError, forkJoin } from 'rxjs';
+import { Observable, of, throwError, map, catchError, forkJoin, switchMap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   DashboardStats, Order, OrderDetail, ActiveCart, AbandonedCart,
   CustomerHistory, RevenueTrend, OrdersTrend, AbandonedTrend,
-  TopProduct, PaginatedResponse,
+  TopProduct, PaginatedResponse, InventoryProduct, InventoryResponse,
 } from '../interfaces';
 
 @Injectable({ providedIn: 'root' })
@@ -269,6 +269,39 @@ export class ApiService {
       ),
     );
   }
+
+  getInventoryProducts(search: string = ''): Observable<InventoryResponse> {
+    let params = this.auth()
+      .set('per_page', '100')
+      .set('status', 'publish')
+      .set('orderby', 'title')
+      .set('order', 'asc');
+    if (search.trim()) params = params.set('search', search.trim());
+
+    const getPage = (page: number) => this.http.get<any[]>(`${this.wc}/products`, {
+      params: params.set('page', String(page)),
+      observe: 'response',
+    });
+
+    return getPage(1).pipe(
+      switchMap((first) => {
+        const total = Number(first.headers.get('X-WP-Total') || (first.body || []).length);
+        const totalPages = Number(first.headers.get('X-WP-TotalPages') || 1);
+        if (totalPages <= 1) return of({ total, products: mapInventoryProducts(first.body || []) });
+
+        const remaining = Array.from({ length: totalPages - 1 }, (_, index) => getPage(index + 2));
+        return forkJoin(remaining).pipe(
+          map((responses) => ({
+            total,
+            products: mapInventoryProducts([
+              ...(first.body || []),
+              ...responses.flatMap((response) => response.body || []),
+            ]),
+          })),
+        );
+      }),
+    );
+  }
 }
 
 // ─── MAPPERS ─────────────────────────────────────────
@@ -287,6 +320,20 @@ function mapWCOrder(o: any): Order {
     paymentMethod: o.payment_method_title || '',
     currency: o.currency || 'INR',
   };
+}
+
+function mapInventoryProducts(products: any[]): InventoryProduct[] {
+  return products.map((product): InventoryProduct => ({
+    id: product.id,
+    name: product.name || 'Unnamed product',
+    sku: product.sku || '',
+    image: product.images?.[0]?.src || '',
+    price: Number(product.price || 0),
+    stockQuantity: product.stock_quantity === null ? null : Number(product.stock_quantity),
+    stockStatus: product.stock_status || 'instock',
+    manageStock: Boolean(product.manage_stock),
+    totalSales: Number(product.total_sales || 0),
+  }));
 }
 
 function mapWCOrderDetail(o: any): OrderDetail {

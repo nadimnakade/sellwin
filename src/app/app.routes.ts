@@ -42,6 +42,14 @@ export const routes: Routes = [
         loadComponent: () => import('./features/customers/customers.component').then((c) => c.CustomersComponent),
       },
       {
+        path: 'customers/:mobile',
+        loadComponent: () => import('./features/customers/customers.component').then((c) => c.CustomersComponent),
+      },
+      {
+        path: 'inventory',
+        loadComponent: () => import('./features/inventory/inventory.component').then((c) => c.InventoryComponent),
+      },
+      {
         path: 'settings',
         loadComponent: () => import('./features/settings/settings.component').then((c) => c.SettingsComponent),
       },

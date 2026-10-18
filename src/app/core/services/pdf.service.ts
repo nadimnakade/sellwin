@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import jsPDF from 'jspdf';
 import { OrderDetail, OrderItem } from '../interfaces';
 
+type PdfColor = [number, number, number];
+
 export interface PdfConfig {
   title: string;
   orderNumber: string;
@@ -9,296 +11,278 @@ export interface PdfConfig {
   total: number;
   customer: OrderDetail['customer'];
   products: OrderItem[];
-  /** Optional second column info (Order Info block) */
-  orderInfo?: { label: string; value: string; color?: [number, number, number] }[];
-  /** Summary lines above grand total */
-  summaryLines?: { label: string; value: string; color?: [number, number, number] }[];
+  orderInfo?: { label: string; value: string; color?: PdfColor }[];
+  summaryLines?: { label: string; value: string; color?: PdfColor }[];
+  addresses?: { label: string; lines: string[] }[];
+  note?: string;
   filename: string;
+}
+
+export function buildPdfAddresses(order: OrderDetail): { label: string; lines: string[] }[] {
+  const toLines = (address: OrderDetail['billing']): string[] => [
+    address.company,
+    [address.firstName, address.lastName].filter(Boolean).join(' '),
+    address.address1,
+    address.address2,
+    [address.city, address.state, address.postcode].filter(Boolean).join(', '),
+    address.country,
+  ].filter(Boolean);
+  const blocks = [{ label: 'BILL TO', lines: toLines(order.billing) }];
+  const shippingLines = toLines(order.shipping);
+  if (shippingLines.length) blocks.push({ label: 'SHIP TO', lines: shippingLines });
+  return blocks;
 }
 
 @Injectable({ providedIn: 'root' })
 export class PdfService {
   private readonly font = 'helvetica';
-  private readonly dark: [number, number, number] = [23, 23, 23];
-  private readonly gray: [number, number, number] = [100, 100, 100];
-  private readonly lightBg: [number, number, number] = [250, 250, 250];
-  private readonly border: [number, number, number] = [230, 230, 230];
-  private readonly primaryColor: [number, number, number] = [37, 99, 235];
-  private readonly successColor: [number, number, number] = [34, 197, 94];
+  private readonly ink: PdfColor = [15, 23, 42];
+  private readonly slate: PdfColor = [71, 85, 105];
+  private readonly muted: PdfColor = [148, 163, 184];
+  private readonly line: PdfColor = [226, 232, 240];
+  private readonly surface: PdfColor = [248, 250, 252];
+  private readonly primary: PdfColor = [37, 99, 235];
 
   private buildPdf(config: PdfConfig): jsPDF {
     const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageW = 210;
-    const margin = 15;
-    const contentW = pageW - margin * 2;
+    const pageWidth = 210;
+    const margin = 14;
+    const contentWidth = pageWidth - margin * 2;
+    const footerTop = 282;
     let y = margin;
 
-    const formatDate = (dateStr: string): string => {
-      if (!dateStr) return '-';
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
-        ', ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const formatDate = (value: string): string => {
+      if (!value) return 'Not available';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return `${date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}, ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+    };
+    const formatPrice = (value: number): string => `Rs ${Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+    const totalQuantity = config.products.reduce((sum, product) => sum + Number(product.quantity || 0), 0);
+    const setFont = (style: 'normal' | 'bold' | 'italic', size: number, color: PdfColor): void => {
+      pdf.setFont(this.font, style);
+      pdf.setFontSize(size);
+      pdf.setTextColor(...color);
     };
 
-    const formatPrice = (price: number): string => {
-      return `Rs ${price.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    const drawBrand = (compact = false): void => {
+      const markSize = compact ? 9 : 13;
+      pdf.setFillColor(...this.primary);
+      pdf.roundedRect(margin, y, markSize, markSize, 2.5, 2.5, 'F');
+      setFont('bold', compact ? 8 : 11, [255, 255, 255]);
+      pdf.text('S', margin + markSize / 2, y + markSize * 0.69, { align: 'center' });
+      setFont('bold', compact ? 13 : 20, this.ink);
+      pdf.text('SELLWIN', margin + markSize + 4, y + (compact ? 6.5 : 7.5));
+      if (!compact) {
+        setFont('normal', 8, this.slate);
+        pdf.text('Wholesale Mobile Accessories', margin + markSize + 4, y + 12);
+      }
     };
 
-    // ── HEADER ──────────────────────────────────────────
-    const drawHeader = (): void => {
+    const drawFirstPageHeader = (): void => {
       y = margin;
-
-      // Store name
-      pdf.setFont(this.font, 'bold');
-      pdf.setFontSize(22);
-      pdf.setTextColor(...this.primaryColor);
-      pdf.text('SELLWIN', margin, y + 7);
-
-      pdf.setFont(this.font, 'normal');
-      pdf.setFontSize(9);
-      pdf.setTextColor(...this.gray);
-      pdf.text('Wholesale Mobile Accessories', margin, y + 13);
-
-      // Total amount under company name
-      pdf.setFont(this.font, 'bold');
-      pdf.setFontSize(12);
-      pdf.setTextColor(...this.dark);
-      pdf.text(formatPrice(config.total), margin, y + 20);
-
-      // Title on right
-      pdf.setFont(this.font, 'bold');
-      pdf.setFontSize(16);
-      pdf.setTextColor(...this.dark);
-      pdf.text(config.title, pageW - margin, y + 7, { align: 'right' });
-
-      pdf.setFont(this.font, 'normal');
-      pdf.setFontSize(10);
-      pdf.setTextColor(...this.gray);
-      pdf.text(`#${config.orderNumber}`, pageW - margin, y + 13, { align: 'right' });
-      pdf.setFontSize(9);
-      pdf.text(formatDate(config.dateCreated), pageW - margin, y + 18, { align: 'right' });
-
-      y += 27;
-
-      // Divider
-      pdf.setDrawColor(...this.border);
-      pdf.setLineWidth(0.5);
-      pdf.line(margin, y, pageW - margin, y);
-      y += 8;
-
-      // Two-column layout
-      const col2X = margin + 95;
-
-      // Left: Customer Details
-      pdf.setFont(this.font, 'bold');
-      pdf.setFontSize(9);
-      pdf.setTextColor(...this.dark);
-      pdf.text('CUSTOMER DETAILS', margin, y);
-
-      pdf.setFont(this.font, 'normal');
-      pdf.setFontSize(9);
-      let leftY = y + 6;
-
-      if (config.customer?.name) {
-        pdf.setTextColor(...this.dark);
-        pdf.text(config.customer.name, margin, leftY);
-        leftY += 5;
-      }
-      if (config.customer?.email) {
-        pdf.setTextColor(...this.gray);
-        pdf.text(`Email: ${config.customer.email}`, margin, leftY);
-        leftY += 5;
-      }
-      if (config.customer?.mobile) {
-        pdf.setTextColor(...this.gray);
-        pdf.text(`Phone: ${config.customer.mobile}`, margin, leftY);
-        leftY += 5;
-      }
-
-      // Right: Order Info (if provided)
-      let rightY = y + 6;
-      if (config.orderInfo && config.orderInfo.length) {
-        pdf.setFont(this.font, 'bold');
-        pdf.setFontSize(9);
-        pdf.setTextColor(...this.dark);
-        pdf.text('ORDER INFO', col2X, y);
-
-        pdf.setFont(this.font, 'normal');
-        pdf.setFontSize(9);
-        for (const info of config.orderInfo) {
-          pdf.setTextColor(...this.gray);
-          pdf.text(`${info.label}: `, col2X, rightY);
-          pdf.setTextColor(...(info.color || this.dark));
-          pdf.setFont(this.font, 'bold');
-          pdf.text(info.value, col2X + 20, rightY);
-          pdf.setFont(this.font, 'normal');
-          rightY += 5;
-        }
-      }
-
-      y = Math.max(leftY, rightY) + 5;
+      drawBrand();
+      setFont('bold', 17, this.ink);
+      pdf.text(config.title, pageWidth - margin, y + 6, { align: 'right' });
+      setFont('bold', 10, this.primary);
+      pdf.text(`#${config.orderNumber}`, pageWidth - margin, y + 12, { align: 'right' });
+      setFont('normal', 8, this.slate);
+      pdf.text(formatDate(config.dateCreated), pageWidth - margin, y + 17, { align: 'right' });
+      y += 24;
+      pdf.setFillColor(...this.primary);
+      pdf.roundedRect(margin, y, contentWidth, 19, 3, 3, 'F');
+      setFont('normal', 8, [219, 234, 254]);
+      pdf.text('TOTAL AMOUNT', margin + 6, y + 7);
+      setFont('bold', 16, [255, 255, 255]);
+      pdf.text(formatPrice(config.total), margin + 6, y + 14);
+      setFont('normal', 8, [219, 234, 254]);
+      pdf.text(`${config.products.length} line items  |  ${totalQuantity} total units`, pageWidth - margin - 6, y + 11, { align: 'right' });
+      y += 25;
     };
 
-    // ── TABLE HEADER ────────────────────────────────────
+    const drawInfoCards = (): void => {
+      const cards: { label: string; lines: string[] }[] = [{
+        label: 'CUSTOMER',
+        lines: [config.customer?.name, config.customer?.mobile, config.customer?.email].filter(Boolean),
+      }];
+      (config.addresses || []).forEach((address) => {
+        const lines = address.lines.filter(Boolean);
+        if (lines.length) cards.push({ label: address.label, lines });
+      });
+      const gap = 4;
+      const width = (contentWidth - gap * (cards.length - 1)) / cards.length;
+      const height = Math.max(30, ...cards.map((card) => 14 + Math.min(card.lines.length, 4) * 4.3));
+      cards.forEach((card, index) => {
+        const x = margin + index * (width + gap);
+        pdf.setFillColor(...this.surface);
+        pdf.setDrawColor(...this.line);
+        pdf.roundedRect(x, y, width, height, 2.5, 2.5, 'FD');
+        setFont('bold', 7.5, this.primary);
+        pdf.text(card.label, x + 4, y + 6);
+        let lineY = y + 12;
+        card.lines.slice(0, 4).forEach((line, lineIndex) => {
+          setFont(lineIndex === 0 ? 'bold' : 'normal', 8, lineIndex === 0 ? this.ink : this.slate);
+          const wrapped = pdf.splitTextToSize(line, width - 8).slice(0, 2);
+          pdf.text(wrapped, x + 4, lineY);
+          lineY += wrapped.length * 3.7 + 0.7;
+        });
+      });
+      y += height + 5;
+
+      if (config.orderInfo?.length) {
+        pdf.setDrawColor(...this.line);
+        pdf.roundedRect(margin, y, contentWidth, 12, 2, 2, 'S');
+        const columnWidth = contentWidth / config.orderInfo.length;
+        config.orderInfo.forEach((info, index) => {
+          const x = margin + index * columnWidth + 4;
+          setFont('normal', 7, this.slate);
+          pdf.text(info.label.toUpperCase(), x, y + 4.5);
+          setFont('bold', 8.5, info.color || this.ink);
+          pdf.text(info.value || '-', x, y + 9);
+        });
+        y += 18;
+      } else {
+        y += 2;
+      }
+    };
+
+    const drawContinuationHeader = (): void => {
+      y = margin;
+      drawBrand(true);
+      setFont('bold', 9, this.ink);
+      pdf.text(`${config.title}  #${config.orderNumber}`, pageWidth - margin, y + 6, { align: 'right' });
+      y += 15;
+      pdf.setDrawColor(...this.line);
+      pdf.line(margin, y, pageWidth - margin, y);
+      y += 5;
+    };
+
     const drawTableHeader = (): void => {
-      pdf.setFillColor(30, 30, 30);
-      pdf.rect(margin, y, contentW, 9, 'F');
-
-      pdf.setFont(this.font, 'bold');
-      pdf.setFontSize(9);
-      pdf.setTextColor(255, 255, 255);
-
-      pdf.text('PRODUCT', margin + 3, y + 6);
-      pdf.text('PRICE', margin + 120, y + 6, { align: 'right' });
-      pdf.text('QTY', margin + 145, y + 6, { align: 'center' });
-      pdf.text('TOTAL', contentW + margin - 3, y + 6, { align: 'right' });
-
+      pdf.setFillColor(...this.ink);
+      pdf.roundedRect(margin, y, contentWidth, 9, 1.5, 1.5, 'F');
+      setFont('bold', 7.5, [255, 255, 255]);
+      pdf.text('#', margin + 3, y + 5.8);
+      pdf.text('PRODUCT', margin + 13, y + 5.8);
+      pdf.text('UNIT PRICE', margin + 128, y + 5.8, { align: 'right' });
+      pdf.text('QTY', margin + 148, y + 5.8, { align: 'center' });
+      pdf.text('AMOUNT', pageWidth - margin - 3, y + 5.8, { align: 'right' });
       y += 9;
     };
 
-    // ── TABLE ROW ───────────────────────────────────────
-    const drawRow = (item: OrderItem, index: number): number => {
-      const rowH = 22;
-
-      if (index % 2 === 1) {
-        pdf.setFillColor(...this.lightBg);
-        pdf.rect(margin, y, contentW, rowH, 'F');
-      }
-
-      pdf.setDrawColor(...this.border);
-      pdf.setLineWidth(0.3);
-      pdf.line(margin, y + rowH, margin + contentW, y + rowH);
-
-      // Image
-      if (item.imageBase64) {
+    const addProductImage = (item: OrderItem, index: number, rowY: number): void => {
+      const image = item.imageBase64 || (item.image?.startsWith('data:image/') ? item.image : '');
+      if (image) {
         try {
-          const fmt = item.imageBase64.startsWith('data:image/png') ? 'PNG' :
-            item.imageBase64.startsWith('data:image/webp') ? 'WEBP' : 'JPEG';
-          pdf.addImage(item.imageBase64, fmt, margin + 3, y + 4, 15, 15, undefined, 'FAST');
-        } catch (e) {
-          console.error('PDF image error:', e);
-        }
+          const format = image.startsWith('data:image/png') ? 'PNG' : image.startsWith('data:image/webp') ? 'WEBP' : 'JPEG';
+          pdf.addImage(image, format, margin + 13, rowY + 3, 13, 13, undefined, 'FAST');
+          return;
+        } catch { /* Fall through to placeholder. */ }
       }
-
-      // Product name
-      pdf.setFont(this.font, 'bold');
-      pdf.setFontSize(9);
-      pdf.setTextColor(...this.dark);
-      const nameLines = pdf.splitTextToSize(item.name, 68);
-      pdf.text(nameLines.slice(0, 2), margin + 22, y + 7);
-
-      // Price (unit)
-      pdf.setFont(this.font, 'bold');
-      pdf.setFontSize(9);
-      pdf.setTextColor(...this.gray);
-      pdf.text(formatPrice(item.price), margin + 120, y + 12, { align: 'right' });
-
-      // Quantity
-      pdf.setFont(this.font, 'bold');
-      pdf.setFontSize(9);
-      pdf.setTextColor(...this.dark);
-      pdf.text(String(item.quantity), margin + 145, y + 12, { align: 'center' });
-
-      // Line total
-      const lineTotal = item.subtotal || item.price * item.quantity;
-      pdf.setFont(this.font, 'bold');
-      pdf.setFontSize(9);
-      pdf.setTextColor(...this.dark);
-      pdf.text(formatPrice(lineTotal), contentW + margin - 3, y + 12, { align: 'right' });
-
-      return rowH;
+      pdf.setFillColor(226, 232, 240);
+      pdf.roundedRect(margin + 13, rowY + 3, 13, 13, 2, 2, 'F');
+      setFont('bold', 7.5, this.slate);
+      pdf.text(String(index + 1), margin + 19.5, rowY + 10.8, { align: 'center' });
     };
 
-    // ── SUMMARY ─────────────────────────────────────────
-    const drawSummary = (): void => {
-      y += 10;
-      const summaryX = contentW + margin - 70;
-
-      pdf.setDrawColor(...this.dark);
-      pdf.setLineWidth(0.5);
-      pdf.line(summaryX, y, contentW + margin, y);
-      y += 8;
-
-      // Extra summary lines
-      if (config.summaryLines) {
-        for (const line of config.summaryLines) {
-          pdf.setFont(this.font, 'normal');
-          pdf.setFontSize(9);
-          pdf.setTextColor(...this.gray);
-          pdf.text(line.label, summaryX, y);
-          pdf.setTextColor(...(line.color || this.dark));
-          pdf.text(line.value, contentW + margin - 3, y, { align: 'right' });
-          y += 6;
-        }
-      }
-
-      // Items count
-      pdf.setFont(this.font, 'normal');
-      pdf.setFontSize(9);
-      pdf.setTextColor(...this.gray);
-      pdf.text('Total Items:', summaryX, y);
-      pdf.setTextColor(...this.dark);
-      pdf.text(String(config.products.length), contentW + margin - 3, y, { align: 'right' });
-      y += 10;
-
-      // Grand Total
-      pdf.setFont(this.font, 'bold');
-      pdf.setFontSize(13);
-      pdf.setTextColor(...this.dark);
-      pdf.text('TOTAL:', summaryX, y);
-      pdf.setFontSize(14);
-      pdf.setTextColor(...this.primaryColor);
-      pdf.text(formatPrice(config.total), contentW + margin - 3, y, { align: 'right' });
-      y += 10;
-
-      pdf.setDrawColor(...this.dark);
-      pdf.setLineWidth(0.5);
-      pdf.line(summaryX, y, contentW + margin, y);
-    };
-
-    // ── FOOTER ──────────────────────────────────────────
-    const drawFooter = (): void => {
-      y += 15;
-      pdf.setFont(this.font, 'italic');
-      pdf.setFontSize(9);
-      pdf.setTextColor(...this.gray);
-      pdf.text('Thank you for your business!', pageW / 2, y, { align: 'center' });
-      y += 5;
-      pdf.text('For queries, contact us via WhatsApp or call.', pageW / 2, y, { align: 'center' });
-    };
-
-    const checkPage = (needed: number): void => {
-      if (y + needed > 270) {
+    const drawProductRow = (item: OrderItem, index: number): void => {
+      const nameLines = pdf.splitTextToSize(item.name || 'Unnamed product', 75).slice(0, 2);
+      const rowHeight = Math.max(19, 8 + nameLines.length * 4.2);
+      if (y + rowHeight > footerTop - 5) {
         pdf.addPage();
-        y = margin;
+        drawContinuationHeader();
         drawTableHeader();
       }
+      if (index % 2 === 1) {
+        pdf.setFillColor(...this.surface);
+        pdf.rect(margin, y, contentWidth, rowHeight, 'F');
+      }
+      addProductImage(item, index, y);
+      setFont('normal', 7.5, this.slate);
+      pdf.text(String(index + 1), margin + 4.5, y + 10.5, { align: 'center' });
+      setFont('bold', 8.5, this.ink);
+      pdf.text(nameLines, margin + 30, y + 7);
+      if (item.sku) {
+        setFont('normal', 7, this.muted);
+        pdf.text(`SKU: ${item.sku}`, margin + 30, y + 7 + nameLines.length * 4.2);
+      }
+      setFont('normal', 8, this.slate);
+      pdf.text(formatPrice(item.price), margin + 128, y + 10.5, { align: 'right' });
+      setFont('bold', 8.5, this.ink);
+      pdf.text(String(item.quantity), margin + 148, y + 10.5, { align: 'center' });
+      pdf.text(formatPrice(item.subtotal || item.price * item.quantity), pageWidth - margin - 3, y + 10.5, { align: 'right' });
+      pdf.setDrawColor(...this.line);
+      pdf.line(margin, y + rowHeight, pageWidth - margin, y + rowHeight);
+      y += rowHeight;
     };
 
-    // ── BUILD ───────────────────────────────────────────
-    drawHeader();
+    const ensureSpace = (height: number): void => {
+      if (y + height > footerTop - 5) {
+        pdf.addPage();
+        drawContinuationHeader();
+      }
+    };
+
+    const drawSummary = (): void => {
+      const lines = config.summaryLines || [];
+      const height = 24 + lines.length * 6;
+      ensureSpace(height + (config.note ? 22 : 0));
+      y += 7;
+      const width = 78;
+      const x = pageWidth - margin - width;
+      pdf.setFillColor(...this.surface);
+      pdf.setDrawColor(...this.line);
+      pdf.roundedRect(x, y, width, height, 3, 3, 'FD');
+      let rowY = y + 7;
+      lines.forEach((line) => {
+        setFont('normal', 8, this.slate);
+        pdf.text(line.label.replace(/:$/, ''), x + 5, rowY);
+        setFont('bold', 8, line.color || this.ink);
+        pdf.text(line.value, x + width - 5, rowY, { align: 'right' });
+        rowY += 6;
+      });
+      setFont('normal', 8, this.slate);
+      pdf.text('Total units', x + 5, rowY);
+      setFont('bold', 8, this.ink);
+      pdf.text(String(totalQuantity), x + width - 5, rowY, { align: 'right' });
+      rowY += 7;
+      pdf.setDrawColor(...this.line);
+      pdf.line(x + 5, rowY - 3, x + width - 5, rowY - 3);
+      setFont('bold', 10, this.ink);
+      pdf.text('TOTAL', x + 5, rowY + 2);
+      setFont('bold', 12, this.primary);
+      pdf.text(formatPrice(config.total), x + width - 5, rowY + 2, { align: 'right' });
+
+      if (config.note) {
+        setFont('bold', 7.5, this.primary);
+        pdf.text('CUSTOMER NOTE', margin, y + 6);
+        setFont('normal', 8, this.slate);
+        pdf.text(pdf.splitTextToSize(config.note, contentWidth - width - 14).slice(0, 4), margin, y + 12);
+      }
+      y += height;
+    };
+
+    const addPageFooters = (): void => {
+      const pages = pdf.getNumberOfPages();
+      for (let page = 1; page <= pages; page += 1) {
+        pdf.setPage(page);
+        pdf.setDrawColor(...this.line);
+        pdf.line(margin, footerTop, pageWidth - margin, footerTop);
+        setFont('normal', 7.5, this.slate);
+        pdf.text('Thank you for choosing Sellwin.', margin, footerTop + 5);
+        pdf.text(`Generated ${formatDate(new Date().toISOString())}`, pageWidth / 2, footerTop + 5, { align: 'center' });
+        pdf.text(`Page ${page} of ${pages}`, pageWidth - margin, footerTop + 5, { align: 'right' });
+      }
+    };
+
+    drawFirstPageHeader();
+    drawInfoCards();
     drawTableHeader();
-
-    config.products.forEach((item, i) => {
-      checkPage(25);
-      const rh = drawRow(item, i);
-      y += rh;
-    });
-
-    checkPage(60);
+    config.products.forEach(drawProductRow);
     drawSummary();
-    drawFooter();
-
+    addPageFooters();
     return pdf;
   }
 
-  generate(config: PdfConfig): void {
-    const pdf = this.buildPdf(config);
-    pdf.save(config.filename);
-  }
-
-  generateBlob(config: PdfConfig): Blob {
-    const pdf = this.buildPdf(config);
-    return pdf.output('blob');
-  }
+  generate(config: PdfConfig): void { this.buildPdf(config).save(config.filename); }
+  generateBlob(config: PdfConfig): Blob { return this.buildPdf(config).output('blob'); }
 }

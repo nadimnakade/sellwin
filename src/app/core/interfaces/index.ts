@@ -138,6 +138,23 @@ export interface TopProduct {
   orderCount: number;
 }
 
+export interface InventoryProduct {
+  id: number;
+  name: string;
+  sku: string;
+  image: string;
+  price: number;
+  stockQuantity: number | null;
+  stockStatus: 'instock' | 'outofstock' | 'onbackorder';
+  manageStock: boolean;
+  totalSales: number;
+}
+
+export interface InventoryResponse {
+  products: InventoryProduct[];
+  total: number;
+}
+
 export interface AuthUser {
   authenticated: boolean;
   user?: {

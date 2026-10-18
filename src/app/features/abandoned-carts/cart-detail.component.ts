@@ -6,7 +6,7 @@ import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { ApiService } from '../../core/services/api.service';
 import { UtilsService } from '../../core/services/utils.service';
-import { PdfService, PdfConfig } from '../../core/services/pdf.service';
+import { PdfService, PdfConfig, buildPdfAddresses } from '../../core/services/pdf.service';
 import { OrderDetail, OrderItem } from '../../core/interfaces';
 import { whatsappConfig, environment } from '../../../environments/environment';
 import { CartSharedService } from './cart-shared.service';
@@ -311,6 +311,7 @@ export class CartDetailComponent implements OnInit {
       total: order.total,
       customer: order.customer,
       products: order.products,
+      addresses: buildPdfAddresses(order),
       filename: `Cart-Invoice-${order.orderNumber}.pdf`,
     });
   }
@@ -350,6 +351,7 @@ export class CartDetailComponent implements OnInit {
       total: c.total,
       customer: c.customer,
       products: c.products,
+      addresses: buildPdfAddresses(c),
       filename: `Cart-Invoice-${c.orderNumber}.pdf`,
     };
 
