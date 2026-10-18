@@ -23,7 +23,11 @@ export class UtilsService {
   }
 
   canShareFile(file: File): boolean {
-    return typeof navigator.share === 'function'
+    // Do not use Web Share for PDFs on iOS/iPadOS. Safari hands WhatsApp a
+    // browser-local blob URL even when the payload contains only the file.
+    // Callers will use the existing server-upload/public-HTTPS-link path.
+    return !this.isAppleMobile()
+      && typeof navigator.share === 'function'
       && typeof navigator.canShare === 'function'
       && navigator.canShare({ files: [file] });
   }
@@ -31,11 +35,14 @@ export class UtilsService {
   async shareFile(file: File, text: string): Promise<void> {
     // iOS/iPadOS Safari can pass its temporary blob URL to WhatsApp when text
     // and a file are shared together. A files-only payload sends the real PDF.
-    const isAppleMobile = /iPad|iPhone|iPod/.test(navigator.userAgent)
-      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const shareData: ShareData = { files: [file] };
-    if (!isAppleMobile) shareData.text = text;
+    shareData.text = text;
     await navigator.share(shareData);
+  }
+
+  private isAppleMobile(): boolean {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   }
 
   exportToCsv(data: any[], filename: string): void {
