@@ -340,6 +340,7 @@ function mapWCOrderDetail(o: any): OrderDetail {
   const items = (o.line_items || []).map((li: any) => ({
     productId: li.product_id,
     name: li.name,
+    model: getLineItemModel(li),
     sku: li.sku || '',
     quantity: li.quantity,
     price: parseFloat(li.price || '0'),
@@ -397,6 +398,46 @@ function mapWCOrderDetail(o: any): OrderDetail {
   };
 }
 
+function getLineItemModel(lineItem: any): string {
+  const metadata = Array.isArray(lineItem?.meta_data) ? lineItem.meta_data : [];
+  const values: string[] = [];
+
+  metadata.forEach((meta: any) => {
+    const key = String(meta?.key || '').trim();
+    const displayKey = String(meta?.display_key ?? meta?.displayKey ?? '').trim();
+    const rawValue = meta?.display_value ?? meta?.value ?? meta?.displayValue ?? '';
+    const value = typeof rawValue === 'object'
+      ? Object.values(rawValue).map((entry) => String(entry)).join(' / ').trim()
+      : String(rawValue).trim();
+    if (!key || !value) return;
+
+    const searchableKey = `${key} ${displayKey}`.toLowerCase();
+    const normalizedKey = searchableKey.replace(/^attribute_/, '').replace(/^pa_/, '');
+    const isVariationAttribute = (!key.startsWith('_') || /model|variant|colour|color|size/i.test(displayKey))
+      && (searchableKey.startsWith('attribute_')
+      || searchableKey.startsWith('pa_')
+      || /model|variant|colour|color|size/i.test(normalizedKey));
+    if (!isVariationAttribute) return;
+
+    if (!values.some((existing) => existing.toLowerCase() === value.toLowerCase())) {
+      values.push(value);
+    }
+  });
+
+  const variation = lineItem?.variation || lineItem?.variation_data || lineItem?.attributes;
+  if (variation && typeof variation === 'object') {
+    Object.entries(variation).forEach(([key, rawValue]) => {
+      const value = String(rawValue ?? '').trim();
+      if (value && /model|variant|colour|color|size|attribute|pa_/i.test(key)
+        && !values.some((existing) => existing.toLowerCase() === value.toLowerCase())) {
+        values.push(value);
+      }
+    });
+  }
+
+  return values.join(' / ');
+}
+
 function formatIndianMobile(mobile: string): string {
   const digits = (mobile || '').replace(/[^0-9]/g, '');
   if (!digits) return '';
@@ -448,6 +489,7 @@ function mapSellwinOrderDetail(o: any): OrderDetail {
     products: (o.products || []).map((p: any) => ({
       productId: p.productId,
       name: p.name,
+      model: p.model || p.variation || p.variant || '',
       sku: p.sku || '',
       quantity: p.quantity,
       price: parseFloat(p.price || '0'),

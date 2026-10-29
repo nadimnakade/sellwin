@@ -59,6 +59,7 @@ export interface Address {
 export interface OrderItem {
   productId: number;
   name: string;
+  model?: string;
   sku: string;
   quantity: number;
   price: number;

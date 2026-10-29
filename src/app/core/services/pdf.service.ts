@@ -172,17 +172,20 @@ export class PdfService {
     const drawTableHeader = (): void => {
       pdf.setFillColor(...this.ink);
       pdf.roundedRect(margin, y, contentWidth, 9, 1.5, 1.5, 'F');
+      pdf.setDrawColor(...this.line);
+      pdf.setLineWidth(0.35);
+      pdf.roundedRect(margin, y, contentWidth, 9, 1.5, 1.5, 'S');
       setFont('bold', 7.5, [255, 255, 255]);
       pdf.text('#', margin + 3, y + 5.8);
       pdf.text('PRODUCT', margin + 13, y + 5.8);
-      pdf.text('UNIT PRICE', margin + 128, y + 5.8, { align: 'right' });
-      pdf.text('QTY', margin + 148, y + 5.8, { align: 'center' });
+      pdf.text('QTY', margin + 128, y + 5.8, { align: 'center' });
+      pdf.text('UNIT PRICE', margin + 148, y + 5.8, { align: 'right' });
       pdf.text('AMOUNT', pageWidth - margin - 3, y + 5.8, { align: 'right' });
       y += 9;
     };
 
     const addProductImage = (item: OrderItem, index: number, rowY: number): void => {
-      const imageSize = 17;
+      const imageSize = 20;
       const image = item.imageBase64 || (item.image?.startsWith('data:image/') ? item.image : '');
       if (image) {
         try {
@@ -194,12 +197,13 @@ export class PdfService {
       pdf.setFillColor(226, 232, 240);
       pdf.roundedRect(margin + 13, rowY + 3, imageSize, imageSize, 2, 2, 'F');
       setFont('bold', 7.5, this.slate);
-      pdf.text(String(index + 1), margin + 21.5, rowY + 12.8, { align: 'center' });
+      pdf.text(String(index + 1), margin + 23, rowY + 14, { align: 'center' });
     };
 
     const drawProductRow = (item: OrderItem, index: number): void => {
       const nameLines = pdf.splitTextToSize(item.name || 'Unnamed product', 71).slice(0, 2);
-      const rowHeight = Math.max(23, 8 + nameLines.length * 4.2);
+      const modelLines = item.model ? pdf.splitTextToSize(`Model: ${item.model}`, 71).slice(0, 2) : [];
+      const rowHeight = Math.max(26, 8 + (nameLines.length + modelLines.length) * 4.2 + (item.sku ? 3.5 : 0), 26);
       if (y + rowHeight > footerTop - 5) {
         pdf.addPage();
         drawContinuationHeader();
@@ -214,17 +218,24 @@ export class PdfService {
       pdf.text(String(index + 1), margin + 4.5, y + 12.5, { align: 'center' });
       setFont('bold', 8.5, this.ink);
       pdf.text(nameLines, margin + 34, y + 8);
+      let detailY = y + 8 + nameLines.length * 4.2;
+      if (modelLines.length) {
+        setFont('normal', 7, this.slate);
+        pdf.text(modelLines, margin + 34, detailY);
+        detailY += modelLines.length * 4.2;
+      }
       if (item.sku) {
         setFont('normal', 7, this.muted);
-        pdf.text(`SKU: ${item.sku}`, margin + 34, y + 8 + nameLines.length * 4.2);
+        pdf.text(`SKU: ${item.sku}`, margin + 34, detailY);
       }
       setFont('normal', 8, this.slate);
-      pdf.text(formatPrice(item.price), margin + 128, y + 12.5, { align: 'right' });
+      pdf.text(String(item.quantity), margin + 128, y + 12.5, { align: 'center' });
       setFont('bold', 8.5, this.ink);
-      pdf.text(String(item.quantity), margin + 148, y + 12.5, { align: 'center' });
+      pdf.text(formatPrice(item.price), margin + 148, y + 12.5, { align: 'right' });
       pdf.text(formatPrice(item.subtotal || item.price * item.quantity), pageWidth - margin - 3, y + 12.5, { align: 'right' });
       pdf.setDrawColor(...this.line);
-      pdf.line(margin, y + rowHeight, pageWidth - margin, y + rowHeight);
+      pdf.setLineWidth(0.35);
+      pdf.rect(margin, y, contentWidth, rowHeight, 'S');
       y += rowHeight;
     };
 
