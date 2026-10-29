@@ -26,11 +26,11 @@ import { CustomerHistory } from '../../core/interfaces';
       <div class="glass-card overflow-hidden mb-6">
         <div class="p-4 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between gap-3">
           <div><h2 class="font-semibold text-surface-900 dark:text-white">Latest Customers</h2><p class="text-xs text-surface-500 mt-1">Newest WooCommerce customers first</p></div>
-          <div class="relative w-56"><i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400"></i><input class="input-field pl-9 text-sm" placeholder="Search customers" [value]="customerSearch()" (input)="customerSearch.set($any($event.target).value); loadCustomers()"></div>
+          <div class="flex items-center gap-2"><div class="relative w-56"><i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400"></i><input class="input-field pl-9 text-sm" placeholder="Search customers" [value]="customerSearch()" (input)="customerSearch.set($any($event.target).value); customerPage.set(1); loadCustomers()"></div><select class="input-field text-sm" [value]="customerSort()" (change)="customerSort.set($any($event.target).value); customerPage.set(1); loadCustomers()"><option value="registered_date">Newest</option><option value="name">Name</option><option value="email">Email</option><option value="orders">Orders</option></select><button class="btn-ghost p-2" (click)="customerOrder.set(customerOrder() === 'desc' ? 'asc' : 'desc'); loadCustomers()" [title]="customerOrder() === 'desc' ? 'Descending' : 'Ascending'"><i [class]="customerOrder() === 'desc' ? 'pi pi-sort-amount-down' : 'pi pi-sort-amount-up'"></i></button></div>
         </div>
         @if (customersLoading()) { <div class="p-6 text-center text-surface-400">Loading customers…</div> }
         @else if (!customers().length) { <div class="p-6 text-center text-surface-400">No customers found</div> }
-        @else { <div class="overflow-x-auto"><table class="w-full"><thead><tr class="border-b border-surface-200 dark:border-surface-700"><th class="text-left px-4 py-3 text-xs uppercase text-surface-500">Customer</th><th class="text-left px-4 py-3 text-xs uppercase text-surface-500">Mobile</th><th class="text-left px-4 py-3 text-xs uppercase text-surface-500">Orders</th><th class="text-left px-4 py-3 text-xs uppercase text-surface-500">Joined</th><th class="text-right px-4 py-3 text-xs uppercase text-surface-500">Action</th></tr></thead><tbody>@for (c of customers(); track c.id) {<tr class="border-b border-surface-100 dark:border-surface-800"><td class="px-4 py-3"><div class="font-medium">{{ customerName(c) }}</div><div class="text-xs text-surface-500">{{ c.email || 'No email' }}</div></td><td class="px-4 py-3 text-sm">{{ c.billing?.phone || '—' }}</td><td class="px-4 py-3 text-sm">{{ c.orders_count || 0 }}</td><td class="px-4 py-3 text-sm text-surface-500">{{ c.date_created | date:'dd MMM yyyy' }}</td><td class="px-4 py-3 text-right"><button class="btn-ghost text-sm" (click)="editCustomer.set(c)"><i class="pi pi-pencil"></i> Edit</button></td></tr>}</tbody></table></div> }
+        @else { <div class="overflow-x-auto"><table class="w-full"><thead><tr class="border-b border-surface-200 dark:border-surface-700"><th class="text-left px-4 py-3 text-xs uppercase text-surface-500">Customer</th><th class="text-left px-4 py-3 text-xs uppercase text-surface-500">Mobile</th><th class="text-left px-4 py-3 text-xs uppercase text-surface-500">Orders</th><th class="text-left px-4 py-3 text-xs uppercase text-surface-500">Joined</th><th class="text-right px-4 py-3 text-xs uppercase text-surface-500">Action</th></tr></thead><tbody>@for (c of customers(); track c.id) {<tr class="border-b border-surface-100 dark:border-surface-800"><td class="px-4 py-3"><div class="font-medium">{{ customerName(c) }}</div><div class="text-xs text-surface-500">{{ c.email || 'No email' }}</div></td><td class="px-4 py-3 text-sm">{{ c.billing?.phone || '—' }}</td><td class="px-4 py-3 text-sm">{{ c.orders_count || 0 }}</td><td class="px-4 py-3 text-sm text-surface-500">{{ c.date_created | date:'dd MMM yyyy' }}</td><td class="px-4 py-3 text-right"><button class="btn-ghost text-sm" (click)="editCustomer.set(c)"><i class="pi pi-pencil"></i> Edit</button></td></tr>}</tbody></table></div><div class="flex items-center justify-between p-3 border-t border-surface-200 dark:border-surface-700 text-sm"><span class="text-surface-500">Showing {{ customers().length }} of {{ customerTotal() }} customers</span><div class="flex items-center gap-2"><button class="btn-ghost p-2" [disabled]="customerPage() <= 1" (click)="customerPage.set(customerPage() - 1); loadCustomers()"><i class="pi pi-chevron-left"></i></button><span>Page {{ customerPage() }} of {{ customerPages() }}</span><button class="btn-ghost p-2" [disabled]="customerPage() >= customerPages()" (click)="customerPage.set(customerPage() + 1); loadCustomers()"><i class="pi pi-chevron-right"></i></button></div></div> }
       </div>
       @if (editCustomer(); as edit) { <div class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"><div class="glass-card w-full max-w-lg p-6"><div class="flex justify-between items-center mb-5"><h2 class="text-lg font-semibold">Edit Customer</h2><button class="btn-ghost p-2" (click)="editCustomer.set(null)"><i class="pi pi-times"></i></button></div><div class="grid grid-cols-2 gap-3"><label class="text-sm">First name<input class="input-field mt-1" [(ngModel)]="edit.first_name"></label><label class="text-sm">Last name<input class="input-field mt-1" [(ngModel)]="edit.last_name"></label><label class="text-sm col-span-2">Email<input class="input-field mt-1" [(ngModel)]="edit.email"></label><label class="text-sm col-span-2">Mobile<input class="input-field mt-1" [(ngModel)]="edit.billing.phone"></label></div><div class="flex justify-end gap-2 mt-6"><button class="btn-ghost" (click)="editCustomer.set(null)">Cancel</button><button class="btn-primary" (click)="saveCustomer(edit)" [disabled]="savingCustomer()">{{ savingCustomer() ? 'Saving…' : 'Save changes' }}</button></div></div></div> }
       <div class="glass-card p-6 mb-6">
@@ -173,6 +173,12 @@ export class CustomersComponent implements OnInit {
   customerSearch = signal('');
   editCustomer = signal<any | null>(null);
   savingCustomer = signal(false);
+  customerPage = signal(1);
+  customerTotal = signal(0);
+  customerSort = signal('registered_date');
+  customerOrder = signal('desc');
+  customerPerPage = 20;
+  customerPages = () => Math.max(1, Math.ceil(this.customerTotal() / this.customerPerPage));
 
   ngOnInit(): void {
     this.loadCustomers();
@@ -183,12 +189,12 @@ export class CustomersComponent implements OnInit {
     });
   }
 
-  customerName(c: any): string { return [c.first_name, c.last_name].filter(Boolean).join(' ') || c.username || 'Guest'; }
+  customerName(c: any): string { return [c.first_name || c.billing?.first_name, c.last_name || c.billing?.last_name].filter(Boolean).join(' ') || c.username || 'Guest'; }
 
   loadCustomers(): void {
     this.customersLoading.set(true);
-    this.api.getCustomers({ page: 1, perPage: 20, search: this.customerSearch() || undefined }).subscribe({
-      next: (res) => { this.customers.set(res.customers || []); this.customersLoading.set(false); },
+    this.api.getCustomers({ page: this.customerPage(), perPage: this.customerPerPage, search: this.customerSearch() || undefined, orderby: this.customerSort(), order: this.customerOrder() }).subscribe({
+      next: (res) => { this.customers.set(res.customers || []); this.customerTotal.set(res.total || 0); this.customersLoading.set(false); },
       error: () => { this.customers.set([]); this.customersLoading.set(false); },
     });
   }

@@ -270,8 +270,8 @@ export class ApiService {
     );
   }
 
-  getCustomers(paramsReq?: { page?: number; perPage?: number; search?: string }): Observable<any> {
-    let p = this.auth().set('orderby', 'registered_date').set('order', 'desc');
+  getCustomers(paramsReq?: { page?: number; perPage?: number; search?: string; orderby?: string; order?: string }): Observable<any> {
+    let p = this.auth().set('orderby', paramsReq?.orderby || 'registered_date').set('order', paramsReq?.order || 'desc');
     if (paramsReq?.page) p = p.set('page', String(paramsReq.page));
     if (paramsReq?.perPage) p = p.set('per_page', String(paramsReq.perPage));
     if (paramsReq?.search) p = p.set('search', paramsReq.search);
