@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
@@ -8,7 +9,7 @@ import { CustomerHistory } from '../../core/interfaces';
 @Component({
   selector: 'app-customers',
   standalone: true,
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, FormsModule],
   template: `
     <div class="page-container">
       <div class="page-header gap-4">
@@ -22,6 +23,16 @@ import { CustomerHistory } from '../../core/interfaces';
           </div>
         }
       </div>
+      <div class="glass-card overflow-hidden mb-6">
+        <div class="p-4 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between gap-3">
+          <div><h2 class="font-semibold text-surface-900 dark:text-white">Latest Customers</h2><p class="text-xs text-surface-500 mt-1">Newest WooCommerce customers first</p></div>
+          <div class="relative w-56"><i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400"></i><input class="input-field pl-9 text-sm" placeholder="Search customers" [value]="customerSearch()" (input)="customerSearch.set($any($event.target).value); loadCustomers()"></div>
+        </div>
+        @if (customersLoading()) { <div class="p-6 text-center text-surface-400">Loading customers…</div> }
+        @else if (!customers().length) { <div class="p-6 text-center text-surface-400">No customers found</div> }
+        @else { <div class="overflow-x-auto"><table class="w-full"><thead><tr class="border-b border-surface-200 dark:border-surface-700"><th class="text-left px-4 py-3 text-xs uppercase text-surface-500">Customer</th><th class="text-left px-4 py-3 text-xs uppercase text-surface-500">Mobile</th><th class="text-left px-4 py-3 text-xs uppercase text-surface-500">Orders</th><th class="text-left px-4 py-3 text-xs uppercase text-surface-500">Joined</th><th class="text-right px-4 py-3 text-xs uppercase text-surface-500">Action</th></tr></thead><tbody>@for (c of customers(); track c.id) {<tr class="border-b border-surface-100 dark:border-surface-800"><td class="px-4 py-3"><div class="font-medium">{{ customerName(c) }}</div><div class="text-xs text-surface-500">{{ c.email || 'No email' }}</div></td><td class="px-4 py-3 text-sm">{{ c.billing?.phone || '—' }}</td><td class="px-4 py-3 text-sm">{{ c.orders_count || 0 }}</td><td class="px-4 py-3 text-sm text-surface-500">{{ c.date_created | date:'dd MMM yyyy' }}</td><td class="px-4 py-3 text-right"><button class="btn-ghost text-sm" (click)="editCustomer.set(c)"><i class="pi pi-pencil"></i> Edit</button></td></tr>}</tbody></table></div> }
+      </div>
+      @if (editCustomer(); as edit) { <div class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"><div class="glass-card w-full max-w-lg p-6"><div class="flex justify-between items-center mb-5"><h2 class="text-lg font-semibold">Edit Customer</h2><button class="btn-ghost p-2" (click)="editCustomer.set(null)"><i class="pi pi-times"></i></button></div><div class="grid grid-cols-2 gap-3"><label class="text-sm">First name<input class="input-field mt-1" [(ngModel)]="edit.first_name"></label><label class="text-sm">Last name<input class="input-field mt-1" [(ngModel)]="edit.last_name"></label><label class="text-sm col-span-2">Email<input class="input-field mt-1" [(ngModel)]="edit.email"></label><label class="text-sm col-span-2">Mobile<input class="input-field mt-1" [(ngModel)]="edit.billing.phone"></label></div><div class="flex justify-end gap-2 mt-6"><button class="btn-ghost" (click)="editCustomer.set(null)">Cancel</button><button class="btn-primary" (click)="saveCustomer(edit)" [disabled]="savingCustomer()">{{ savingCustomer() ? 'Saving…' : 'Save changes' }}</button></div></div></div> }
       <div class="glass-card p-6 mb-6">
         <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Search by Mobile Number</label>
         <div class="flex gap-3">
@@ -157,12 +168,36 @@ export class CustomersComponent implements OnInit {
   error = signal('');
   searched = signal(false);
   currentMobile = signal('');
+  customers = signal<any[]>([]);
+  customersLoading = signal(false);
+  customerSearch = signal('');
+  editCustomer = signal<any | null>(null);
+  savingCustomer = signal(false);
 
   ngOnInit(): void {
+    this.loadCustomers();
     this.route.paramMap.subscribe((params) => {
       const mobile = params.get('mobile') || '';
       this.currentMobile.set(mobile);
       if (mobile) this.loadCustomer(mobile);
+    });
+  }
+
+  customerName(c: any): string { return [c.first_name, c.last_name].filter(Boolean).join(' ') || c.username || 'Guest'; }
+
+  loadCustomers(): void {
+    this.customersLoading.set(true);
+    this.api.getCustomers({ page: 1, perPage: 20, search: this.customerSearch() || undefined }).subscribe({
+      next: (res) => { this.customers.set(res.customers || []); this.customersLoading.set(false); },
+      error: () => { this.customers.set([]); this.customersLoading.set(false); },
+    });
+  }
+
+  saveCustomer(customer: any): void {
+    this.savingCustomer.set(true);
+    this.api.updateCustomer(customer.id, { first_name: customer.first_name || '', last_name: customer.last_name || '', email: customer.email || '', billing: customer.billing, shipping: customer.shipping }).subscribe({
+      next: (updated) => { this.customers.update((items) => items.map((item) => item.id === updated.id ? updated : item)); this.editCustomer.set(null); this.savingCustomer.set(false); },
+      error: () => this.savingCustomer.set(false),
     });
   }
 

@@ -270,6 +270,20 @@ export class ApiService {
     );
   }
 
+  getCustomers(paramsReq?: { page?: number; perPage?: number; search?: string }): Observable<any> {
+    let p = this.auth().set('orderby', 'registered_date').set('order', 'desc');
+    if (paramsReq?.page) p = p.set('page', String(paramsReq.page));
+    if (paramsReq?.perPage) p = p.set('per_page', String(paramsReq.perPage));
+    if (paramsReq?.search) p = p.set('search', paramsReq.search);
+    return this.http.get<any[]>(`${this.wc}/customers`, { params: p, observe: 'response' }).pipe(
+      map((res) => ({ customers: res.body || [], total: Number(res.headers.get('X-WP-Total') || 0) })),
+    );
+  }
+
+  updateCustomer(id: number, data: { first_name: string; last_name: string; email: string; billing?: any; shipping?: any }): Observable<any> {
+    return this.http.put<any>(`${this.wc}/customers/${id}`, data, { params: this.auth() });
+  }
+
   getInventoryProducts(search: string = ''): Observable<InventoryResponse> {
     let params = this.auth()
       .set('per_page', '100')

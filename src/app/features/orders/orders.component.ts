@@ -32,6 +32,14 @@ import { Order } from '../../core/interfaces';
         </div>
       </div>
 
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
+        <div class="stat-card bg-blue-50 dark:bg-blue-950/20"><span class="text-xs text-surface-500">Total Orders</span><p class="text-2xl font-bold text-surface-900 dark:text-white mt-1">{{ totalOrders() }}</p></div>
+        <div class="stat-card bg-green-50 dark:bg-green-950/20"><span class="text-xs text-surface-500">Completed</span><p class="text-2xl font-bold text-green-600 mt-1">{{ countStatus('completed') }}</p></div>
+        <div class="stat-card bg-amber-50 dark:bg-amber-950/20"><span class="text-xs text-surface-500">Processing</span><p class="text-2xl font-bold text-amber-600 mt-1">{{ countStatus('processing') }}</p></div>
+        <div class="stat-card bg-red-50 dark:bg-red-950/20"><span class="text-xs text-surface-500">Cancelled</span><p class="text-2xl font-bold text-red-600 mt-1">{{ countStatus('cancelled') }}</p></div>
+        <div class="stat-card bg-purple-50 dark:bg-purple-950/20"><span class="text-xs text-surface-500">Page Sales</span><p class="text-2xl font-bold text-purple-600 mt-1">{{ utils.formatCurrency(pageSales()) }}</p></div>
+      </div>
+
       <!-- Filters -->
       <div class="glass-card p-3 sm:p-4 mb-4 sm:mb-6">
         <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -224,6 +232,8 @@ export class OrdersComponent implements OnInit {
   customerRouteMobile(mobile: string): string {
     return mobile.replace(/[^0-9]/g, '');
   }
+  countStatus(status: string): number { return this.orders().filter((order) => order.status === status).length; }
+  pageSales(): number { return this.orders().reduce((sum, order) => sum + Number(order.total || 0), 0); }
   orders = signal<Order[]>([]);
   totalOrders = signal(0);
   currentPage = signal(1);
