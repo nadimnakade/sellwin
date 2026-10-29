@@ -172,8 +172,8 @@ export class PdfService {
     const drawTableHeader = (): void => {
       pdf.setFillColor(...this.ink);
       pdf.roundedRect(margin, y, contentWidth, 9, 1.5, 1.5, 'F');
-      pdf.setDrawColor(...this.line);
-      pdf.setLineWidth(0.35);
+      pdf.setDrawColor(148, 163, 184);
+      pdf.setLineWidth(0.5);
       pdf.roundedRect(margin, y, contentWidth, 9, 1.5, 1.5, 'S');
       setFont('bold', 7.5, [255, 255, 255]);
       pdf.text('#', margin + 3, y + 5.8);
@@ -181,6 +181,11 @@ export class PdfService {
       pdf.text('QTY', margin + 128, y + 5.8, { align: 'center' });
       pdf.text('UNIT PRICE', margin + 148, y + 5.8, { align: 'right' });
       pdf.text('AMOUNT', pageWidth - margin - 3, y + 5.8, { align: 'right' });
+      pdf.setDrawColor(71, 85, 105);
+      pdf.setLineWidth(0.35);
+      [margin + 8, margin + 116, margin + 136, margin + 157].forEach((x) => {
+        pdf.line(x, y + 1, x, y + 8);
+      });
       y += 9;
     };
 
@@ -234,8 +239,13 @@ export class PdfService {
       pdf.text(formatPrice(item.price), margin + 148, y + 12.5, { align: 'right' });
       pdf.text(formatPrice(item.subtotal || item.price * item.quantity), pageWidth - margin - 3, y + 12.5, { align: 'right' });
       pdf.setDrawColor(...this.line);
-      pdf.setLineWidth(0.35);
+      pdf.setLineWidth(0.5);
       pdf.rect(margin, y, contentWidth, rowHeight, 'S');
+      // Strong, consistent column separators for a professional invoice grid.
+      pdf.setDrawColor(203, 213, 225);
+      [margin + 8, margin + 116, margin + 136, margin + 157].forEach((x) => {
+        pdf.line(x, y, x, y + rowHeight);
+      });
       y += rowHeight;
     };
 
