@@ -177,13 +177,14 @@ export class PdfService {
       pdf.roundedRect(margin, y, contentWidth, 9, 1.5, 1.5, 'S');
       setFont('bold', 6.8, [255, 255, 255]);
       pdf.text('#', margin + 3, y + 5.8);
-      pdf.text('PRODUCT', margin + 13, y + 5.8);
+      pdf.text('PRODUCT', margin + 23, y + 5.8, { align: 'center' });
+      pdf.text('ITEM', margin + 42, y + 5.8);
       pdf.text('QTY', margin + 128, y + 5.8, { align: 'center' });
-      pdf.text('UNIT PRICE', margin + 146.5, y + 5.8, { align: 'center' });
-      pdf.text('AMOUNT', pageWidth - margin - 3, y + 5.8, { align: 'right' });
+      pdf.text('PRICE', margin + 146.5, y + 5.8, { align: 'center' });
+      pdf.text('TOTAL', pageWidth - margin - 3, y + 5.8, { align: 'right' });
       pdf.setDrawColor(71, 85, 105);
       pdf.setLineWidth(0.35);
-      [margin + 8, margin + 116, margin + 136, margin + 157].forEach((x) => {
+      [margin + 8, margin + 38, margin + 116, margin + 136, margin + 157].forEach((x) => {
         pdf.line(x, y + 1, x, y + 8);
       });
       y += 9;
@@ -206,11 +207,18 @@ export class PdfService {
     };
 
     const drawProductRow = (item: OrderItem, index: number): void => {
-      // Product cell runs from margin + 34 to margin + 116; keep text inside
+      // WooCommerce can append the selected variation to the line-item name
+      // (for example, "Product name - 25W ADAPTER WITH CABLE"). Split that
+      // suffix so it is shown as a dedicated Sizes line in the invoice.
+      const nameParts = String(item.name || 'Unnamed product').split(/\s+-\s+/);
+      const embeddedSize = nameParts.length > 1 ? nameParts.pop() : '';
+      const baseName = nameParts.join(' - ') || String(item.name || 'Unnamed product');
+      const sizeText = item.model || embeddedSize;
+      // Item cell runs from margin + 38 to margin + 116; keep text inside
       // that bordered cell instead of allowing it to overlap Qty.
-      const productTextWidth = 78;
-      const nameLines = pdf.splitTextToSize(item.name || 'Unnamed product', productTextWidth);
-      const modelLines = item.model ? pdf.splitTextToSize(`Model: ${item.model}`, productTextWidth) : [];
+      const productTextWidth = 72;
+      const nameLines = pdf.splitTextToSize(baseName, productTextWidth);
+      const modelLines = sizeText ? pdf.splitTextToSize(`SIZES: ${sizeText}`, productTextWidth) : [];
       const rowHeight = Math.max(26, 8 + (nameLines.length + modelLines.length) * 4.2 + (item.sku ? 3.5 : 0), 26);
       if (y + rowHeight > footerTop - 5) {
         pdf.addPage();
@@ -225,16 +233,16 @@ export class PdfService {
       setFont('normal', 7.5, this.slate);
       pdf.text(String(index + 1), margin + 4.5, y + 12.5, { align: 'center' });
       setFont('bold', 8.5, this.ink);
-      pdf.text(nameLines, margin + 34, y + 8);
+      pdf.text(nameLines, margin + 40, y + 8);
       let detailY = y + 8 + nameLines.length * 4.2;
       if (modelLines.length) {
         setFont('normal', 7, this.slate);
-        pdf.text(modelLines, margin + 34, detailY);
+        pdf.text(modelLines, margin + 40, detailY);
         detailY += modelLines.length * 4.2;
       }
       if (item.sku) {
         setFont('normal', 7, this.muted);
-        pdf.text(`SKU: ${item.sku}`, margin + 34, detailY);
+        pdf.text(`SKU: ${item.sku}`, margin + 40, detailY);
       }
       setFont('normal', 8, this.slate);
       const valueY = y + Math.max(12.5, rowHeight / 2 + 2.5);
@@ -247,7 +255,7 @@ export class PdfService {
       pdf.rect(margin, y, contentWidth, rowHeight, 'S');
       // Strong, consistent column separators for a professional invoice grid.
       pdf.setDrawColor(203, 213, 225);
-      [margin + 8, margin + 116, margin + 136, margin + 157].forEach((x) => {
+      [margin + 8, margin + 38, margin + 116, margin + 136, margin + 157].forEach((x) => {
         pdf.line(x, y, x, y + rowHeight);
       });
       y += rowHeight;
