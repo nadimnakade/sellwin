@@ -175,11 +175,11 @@ export class PdfService {
       pdf.setDrawColor(148, 163, 184);
       pdf.setLineWidth(0.5);
       pdf.roundedRect(margin, y, contentWidth, 9, 1.5, 1.5, 'S');
-      setFont('bold', 7.5, [255, 255, 255]);
+      setFont('bold', 6.8, [255, 255, 255]);
       pdf.text('#', margin + 3, y + 5.8);
       pdf.text('PRODUCT', margin + 13, y + 5.8);
       pdf.text('QTY', margin + 128, y + 5.8, { align: 'center' });
-      pdf.text('UNIT PRICE', margin + 148, y + 5.8, { align: 'right' });
+      pdf.text('UNIT PRICE', margin + 146.5, y + 5.8, { align: 'center' });
       pdf.text('AMOUNT', pageWidth - margin - 3, y + 5.8, { align: 'right' });
       pdf.setDrawColor(71, 85, 105);
       pdf.setLineWidth(0.35);
