@@ -206,8 +206,11 @@ export class PdfService {
     };
 
     const drawProductRow = (item: OrderItem, index: number): void => {
-      const nameLines = pdf.splitTextToSize(item.name || 'Unnamed product', 88);
-      const modelLines = item.model ? pdf.splitTextToSize(`Model: ${item.model}`, 88) : [];
+      // Product cell runs from margin + 34 to margin + 116; keep text inside
+      // that bordered cell instead of allowing it to overlap Qty.
+      const productTextWidth = 78;
+      const nameLines = pdf.splitTextToSize(item.name || 'Unnamed product', productTextWidth);
+      const modelLines = item.model ? pdf.splitTextToSize(`Model: ${item.model}`, productTextWidth) : [];
       const rowHeight = Math.max(26, 8 + (nameLines.length + modelLines.length) * 4.2 + (item.sku ? 3.5 : 0), 26);
       if (y + rowHeight > footerTop - 5) {
         pdf.addPage();
